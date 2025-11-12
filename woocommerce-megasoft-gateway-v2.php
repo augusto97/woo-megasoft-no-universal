@@ -145,6 +145,12 @@ function megasoft_v2_init() {
         return;
     }
 
+    // Verificar si necesita actualización de base de datos
+    $db_version = get_option( 'megasoft_v2_db_version', '0' );
+    if ( version_compare( $db_version, MEGASOFT_V2_VERSION, '<' ) ) {
+        megasoft_v2_create_tables();
+    }
+
     // Cargar archivos
     megasoft_v2_load_files();
 
@@ -240,23 +246,26 @@ function megasoft_v2_create_tables() {
         id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         order_id bigint(20) UNSIGNED NOT NULL,
         control_number varchar(19) NOT NULL,
-        payment_method varchar(50) DEFAULT NULL,
-        status varchar(20) DEFAULT 'pending',
+        authorization_code varchar(50) DEFAULT NULL,
+        transaction_type varchar(50) DEFAULT NULL,
         amount decimal(10,2) NOT NULL,
-        auth_id varchar(50) DEFAULT NULL,
-        reference varchar(100) DEFAULT NULL,
-        document_type char(1) DEFAULT NULL,
-        document_number varchar(20) DEFAULT NULL,
-        client_name varchar(100) DEFAULT NULL,
-        request_data longtext,
-        response_data longtext,
+        currency varchar(10) DEFAULT 'VES',
+        card_last_four varchar(4) DEFAULT NULL,
+        card_type varchar(20) DEFAULT NULL,
+        card_hash varchar(64) DEFAULT NULL,
+        response_code varchar(10) DEFAULT NULL,
+        response_message text DEFAULT NULL,
+        transaction_date datetime DEFAULT NULL,
+        status varchar(20) DEFAULT 'pending',
+        raw_response longtext,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY control_number (control_number),
         KEY order_id (order_id),
         KEY status (status),
-        KEY created_at (created_at)
+        KEY created_at (created_at),
+        KEY transaction_type (transaction_type)
     ) $charset_collate;";
 
     // Tabla de logs
@@ -279,29 +288,28 @@ function megasoft_v2_create_tables() {
     $table_failed_webhooks = $wpdb->prefix . 'megasoft_v2_failed_webhooks';
     $sql_failed_webhooks = "CREATE TABLE IF NOT EXISTS $table_failed_webhooks (
         id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        raw_data longtext NOT NULL,
+        webhook_data longtext NOT NULL,
         error_message text NOT NULL,
         retry_count int(11) DEFAULT 0,
-        next_retry datetime DEFAULT NULL,
-        processed tinyint(1) DEFAULT 0,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        KEY next_retry (next_retry),
-        KEY processed (processed)
+        KEY retry_count (retry_count),
+        KEY created_at (created_at)
     ) $charset_collate;";
 
     // Tabla de auditoría de seguridad
     $table_security_log = $wpdb->prefix . 'megasoft_v2_security_log';
     $sql_security_log = "CREATE TABLE IF NOT EXISTS $table_security_log (
         id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        event_type varchar(50) NOT NULL,
         ip_address varchar(45) DEFAULT NULL,
         user_id bigint(20) UNSIGNED DEFAULT NULL,
-        event_data longtext,
-        severity varchar(20) DEFAULT 'info',
+        action_type varchar(50) NOT NULL,
+        event_type varchar(50) NOT NULL,
+        metadata longtext,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
+        KEY action_type (action_type),
         KEY event_type (event_type),
         KEY ip_address (ip_address),
         KEY created_at (created_at)
