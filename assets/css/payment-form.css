@@ -1,0 +1,454 @@
+/**
+ * MegaSoft v2 - Payment Form Styles
+ *
+ * Beautiful and intuitive payment form design
+ *
+ * @package MegaSoft_Gateway_V2
+ * @version 4.0.0
+ */
+
+/* ==========================================================================
+   Payment Form Container
+   ========================================================================== */
+
+.megasoft-v2-payment-form {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin: 20px 0;
+}
+
+/* ==========================================================================
+   Notices
+   ========================================================================== */
+
+.megasoft-v2-testmode-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 0 0 20px 0;
+    color: #856404;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.megasoft-v2-pci-notice {
+    background: #e8f5e9;
+    border: 1px solid #4caf50;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.megasoft-v2-pci-notice small {
+    color: #2e7d32;
+    font-size: 13px;
+    display: inline-block;
+    line-height: 1.4;
+}
+
+.megasoft-v2-pci-notice::before {
+    content: "🔒";
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   Form Fields
+   ========================================================================== */
+
+.megasoft-v2-payment-form .form-row {
+    margin-bottom: 18px;
+}
+
+.megasoft-v2-payment-form label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.megasoft-v2-payment-form label .required {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.megasoft-v2-payment-form input[type="text"],
+.megasoft-v2-payment-form select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.megasoft-v2-payment-form input[type="text"]:focus,
+.megasoft-v2-payment-form select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.megasoft-v2-payment-form input[type="text"]::placeholder {
+    color: #999;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   Card Number Field with Icon
+   ========================================================================== */
+
+.megasoft-v2-payment-form .form-row-wide:first-of-type {
+    position: relative;
+}
+
+#megasoft_v2_card_number {
+    padding-right: 50px;
+}
+
+.megasoft-v2-card-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 28px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.megasoft-v2-card-icon.active {
+    opacity: 1;
+}
+
+/* Card brand icons - using CSS gradients for now */
+.megasoft-icon-visa {
+    background: linear-gradient(135deg, #1a1f71 0%, #0d47a1 100%);
+    border-radius: 4px;
+}
+
+.megasoft-icon-visa::after {
+    content: "VISA";
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    letter-spacing: 1px;
+}
+
+.megasoft-icon-mastercard {
+    background: linear-gradient(135deg, #eb001b 0%, #f79e1b 100%);
+    border-radius: 4px;
+}
+
+.megasoft-icon-mastercard::after {
+    content: "MC";
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.megasoft-icon-amex {
+    background: linear-gradient(135deg, #006fcf 0%, #0077c8 100%);
+    border-radius: 4px;
+}
+
+.megasoft-icon-amex::after {
+    content: "AMEX";
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.megasoft-icon-discover {
+    background: linear-gradient(135deg, #ff6000 0%, #f57c00 100%);
+    border-radius: 4px;
+}
+
+.megasoft-icon-discover::after {
+    content: "DISC";
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.megasoft-icon-diners {
+    background: linear-gradient(135deg, #0079be 0%, #005a8d 100%);
+    border-radius: 4px;
+}
+
+.megasoft-icon-diners::after {
+    content: "DC";
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+/* ==========================================================================
+   Two-Column Layouts
+   ========================================================================== */
+
+.megasoft-v2-card-details,
+.megasoft-v2-document-info {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.megasoft-v2-card-details .form-row,
+.megasoft-v2-document-info .form-row {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Error Styles
+   ========================================================================== */
+
+.megasoft-v2-payment-form .woocommerce-invalid input,
+.megasoft-v2-payment-form .woocommerce-invalid select {
+    border-color: #e74c3c;
+    background: #fff5f5;
+}
+
+.megasoft-v2-payment-form .woocommerce-invalid input:focus,
+.megasoft-v2-payment-form .woocommerce-invalid select:focus {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.megasoft-error {
+    display: block;
+    color: #e74c3c;
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+.megasoft-error::before {
+    content: "⚠ ";
+    margin-right: 4px;
+}
+
+.megasoft-v2-payment-form .woocommerce-validated input,
+.megasoft-v2-payment-form .woocommerce-validated select {
+    border-color: #27ae60;
+}
+
+/* ==========================================================================
+   Voucher Display
+   ========================================================================== */
+
+.megasoft-v2-voucher {
+    background: #fff;
+    border: 2px solid #27ae60;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.megasoft-v2-voucher h2 {
+    color: #27ae60;
+    font-size: 24px;
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-weight: 600;
+}
+
+.megasoft-v2-voucher .voucher-details {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.megasoft-v2-voucher .voucher-details p {
+    margin: 12px 0;
+    font-size: 15px;
+    line-height: 1.6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.megasoft-v2-voucher .voucher-details strong {
+    color: #555;
+    font-weight: 600;
+    min-width: 180px;
+}
+
+.megasoft-v2-voucher .voucher-print {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.megasoft-v2-voucher .voucher-print .button {
+    background: #3498db;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.megasoft-v2-voucher .voucher-print .button:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+/* ==========================================================================
+   Loading Overlay
+   ========================================================================== */
+
+.megasoft-v2-payment-form .blockUI.blockMsg {
+    border-radius: 8px !important;
+    padding: 20px 30px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 768px) {
+    .megasoft-v2-payment-form {
+        padding: 15px;
+    }
+
+    .megasoft-v2-card-details,
+    .megasoft-v2-document-info {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .megasoft-v2-card-details .form-row,
+    .megasoft-v2-document-info .form-row {
+        margin-bottom: 18px;
+    }
+
+    .megasoft-v2-voucher {
+        padding: 20px;
+    }
+
+    .megasoft-v2-voucher h2 {
+        font-size: 20px;
+    }
+
+    .megasoft-v2-voucher .voucher-details {
+        padding: 15px;
+    }
+
+    .megasoft-v2-voucher .voucher-details p {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .megasoft-v2-voucher .voucher-details strong {
+        min-width: auto;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .megasoft-v2-payment-form input[type="text"],
+    .megasoft-v2-payment-form select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+/* ==========================================================================
+   Print Styles for Voucher
+   ========================================================================== */
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .megasoft-v2-voucher,
+    .megasoft-v2-voucher * {
+        visibility: visible;
+    }
+
+    .megasoft-v2-voucher {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: 2px solid #000;
+        box-shadow: none;
+    }
+
+    .megasoft-v2-voucher .voucher-print {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.megasoft-v2-payment-form input[type="text"]:focus-visible,
+.megasoft-v2-payment-form select:focus-visible {
+    outline: 3px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .megasoft-v2-payment-form input[type="text"],
+    .megasoft-v2-payment-form select {
+        border-width: 3px;
+    }
+
+    .megasoft-error {
+        font-weight: 700;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .megasoft-v2-payment-form input[type="text"],
+    .megasoft-v2-payment-form select,
+    .megasoft-v2-card-icon,
+    .megasoft-v2-voucher .voucher-print .button {
+        transition: none;
+    }
+}

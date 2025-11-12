@@ -117,8 +117,9 @@ function megasoft_v2_load_files() {
     // Cargar clases base
     $files = array(
         'includes/class-megasoft-v2-logger.php',
-        'includes/class-megasoft-v2-security.php',
         'includes/class-megasoft-v2-api.php',
+        'includes/class-megasoft-v2-gateway.php',
+        'includes/class-megasoft-v2-security.php',
         'includes/class-megasoft-v2-card-validator.php',
         'includes/class-megasoft-v2-payment-methods.php',
         'includes/class-megasoft-v2-webhook.php',
