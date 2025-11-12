@@ -328,21 +328,3 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
         );
     }
 }
-
-/**
- * Initialize additional payment methods
- */
-function megasoft_v2_init_additional_payment_methods() {
-    if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
-        return;
-    }
-
-    // Add gateways to WooCommerce
-    add_filter( 'woocommerce_payment_gateways', function( $gateways ) {
-        $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_C2P';
-        $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_P2C';
-        return $gateways;
-    } );
-}
-
-add_action( 'plugins_loaded', 'megasoft_v2_init_additional_payment_methods', 11 );

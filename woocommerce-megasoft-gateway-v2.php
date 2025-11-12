@@ -163,10 +163,12 @@ function megasoft_v2_init() {
 }
 
 /**
- * Agregar gateway a WooCommerce
+ * Agregar gateways a WooCommerce
  */
 function megasoft_v2_add_gateway( $gateways ) {
     $gateways[] = 'WC_Gateway_MegaSoft_V2';
+    $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_C2P';
+    $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_P2C';
     return $gateways;
 }
 
