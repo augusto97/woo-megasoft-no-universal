@@ -157,7 +157,7 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
             }
 
             // Pre-registro
-            $preregistro = $this->api->preregistro( $order_id, $order->get_total(), $order->get_currency() );
+            $preregistro = $this->api->preregistro();
 
             if ( ! $preregistro['success'] ) {
                 throw new Exception( $preregistro['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
