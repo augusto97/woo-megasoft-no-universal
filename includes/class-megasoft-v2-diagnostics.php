@@ -178,12 +178,9 @@ class MegaSoft_V2_Diagnostics {
         $base_url = $testmode ? 'https://paytest.megasoft.com.ve/payment/action/' : 'https://e-payment.megasoft.com.ve/payment/action/';
         $url = $base_url . 'v2-preregistro';
 
-        // Build XML request
+        // Build XML request - PreRegistro solo acepta cod_afiliacion
         $xml = new SimpleXMLElement( '<request/>' );
         $xml->addChild( 'cod_afiliacion', $cod_afiliacion );
-        $xml->addChild( 'factura', 'TEST-' . time() );
-        $xml->addChild( 'monto', '100' ); // 1.00 en formato 10+2
-        $xml->addChild( 'divisa', 'VES' );
 
         // Build Basic Auth header
         $auth = base64_encode( $api_user . ':' . $api_password );
