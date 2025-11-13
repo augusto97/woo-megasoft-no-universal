@@ -661,6 +661,7 @@ class MegaSoft_V2_Admin {
         // Get system info
         $system_info = MegaSoft_V2_Diagnostics::get_system_info();
         $logs_count = MegaSoft_V2_Diagnostics::get_logs_count();
+        $table_stats = MegaSoft_V2_Diagnostics::get_table_stats();
         ?>
         <div class="wrap megasoft-v2-admin">
             <h1><?php esc_html_e( 'Diagnóstico del Sistema', 'woocommerce-megasoft-gateway-v2' ); ?></h1>
@@ -670,6 +671,75 @@ class MegaSoft_V2_Admin {
                     <p><?php echo esc_html( $clear_logs_result['message'] ); ?></p>
                 </div>
             <?php endif; ?>
+
+            <!-- Database Statistics -->
+            <div class="megasoft-status-card">
+                <h2><?php esc_html_e( 'Estadísticas de Base de Datos', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e( 'Tabla', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                            <th><?php esc_html_e( 'Estado', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                            <th><?php esc_html_e( 'Total de Registros', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                            <th><?php esc_html_e( 'Detalles', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td>
+                                <?php if ( $table_stats['transactions']['exists'] ) : ?>
+                                    <span style="color: green;">✓ <?php esc_html_e( 'Existe', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php else : ?>
+                                    <span style="color: red;">✗ <?php esc_html_e( 'No existe', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td><strong><?php echo esc_html( $table_stats['transactions']['total'] ); ?></strong></td>
+                            <td>
+                                <?php if ( ! empty( $table_stats['transactions']['by_status'] ) ) : ?>
+                                    <?php foreach ( $table_stats['transactions']['by_status'] as $status => $count ) : ?>
+                                        <span style="margin-right: 10px;">
+                                            <strong><?php echo esc_html( ucfirst( $status ) ); ?>:</strong> <?php echo esc_html( $count ); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <em><?php esc_html_e( 'Sin datos', 'woocommerce-megasoft-gateway-v2' ); ?></em>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Logs', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td>
+                                <?php if ( $table_stats['logs']['exists'] ) : ?>
+                                    <span style="color: green;">✓ <?php esc_html_e( 'Existe', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php else : ?>
+                                    <span style="color: red;">✗ <?php esc_html_e( 'No existe', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td><strong><?php echo esc_html( $table_stats['logs']['total'] ); ?></strong></td>
+                            <td>
+                                <?php if ( ! empty( $table_stats['logs']['by_level'] ) ) : ?>
+                                    <?php foreach ( $table_stats['logs']['by_level'] as $level => $count ) : ?>
+                                        <span style="margin-right: 10px;">
+                                            <strong><?php echo esc_html( strtoupper( $level ) ); ?>:</strong> <?php echo esc_html( $count ); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <em><?php esc_html_e( 'Sin datos', 'woocommerce-megasoft-gateway-v2' ); ?></em>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px;">
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-transactions' ) ); ?>" class="button">
+                        <?php esc_html_e( 'Ver Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-logs' ) ); ?>" class="button">
+                        <?php esc_html_e( 'Ver Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </p>
+            </div>
 
             <!-- System Information -->
             <div class="megasoft-status-card">

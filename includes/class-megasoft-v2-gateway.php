@@ -750,7 +750,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         // Get last 4 digits of card
         $last_four = substr( $card_data['number'], -4 );
 
-        $wpdb->insert(
+        $insert_result = $wpdb->insert(
             $table_name,
             array(
                 'order_id'             => $order->get_id(),
@@ -771,7 +771,21 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             array( '%d', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
         );
 
+        // Log if insert failed
+        if ( $insert_result === false ) {
+            $this->logger->error( 'Error al guardar transacción en BD', array(
+                'order_id' => $order->get_id(),
+                'wpdb_error' => $wpdb->last_error,
+            ) );
+        } else {
+            $this->logger->info( 'Transacción guardada en BD', array(
+                'order_id' => $order->get_id(),
+                'control' => $response['control'] ?? '',
+            ) );
+        }
+
         // Save to order meta as well (including fields needed for refunds)
+        $order->update_meta_data( '_megasoft_v2_control', $response['control'] ?? '' );
         $order->update_meta_data( '_megasoft_v2_authorization', $response['autorizacion'] ?? '' );
         $order->update_meta_data( '_megasoft_v2_card_last_four', $last_four );
         $order->update_meta_data( '_megasoft_v2_card_type', $this->detect_card_brand( $card_data['number'] ) );
