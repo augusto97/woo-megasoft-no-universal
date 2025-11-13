@@ -767,16 +767,16 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         $card_number = $this->sanitize_card_number( $_POST['megasoft_v2_card_number'] ?? '' );
         $card_expiry = sanitize_text_field( $_POST['megasoft_v2_card_expiry'] ?? '' );
 
-        // Convert MM/YY to YYYYMM
+        // Convert MM/YY to MMAA (formato requerido por Mega Soft API)
         list( $exp_month, $exp_year ) = explode( '/', $card_expiry );
-        $expiry_yyyymm = '20' . $exp_year . $exp_month;
+        $expiry_mmaa = $exp_month . $exp_year; // Ejemplo: 12/25 -> 1225
 
         return array(
             'number'         => $card_number,
             'name'           => sanitize_text_field( $_POST['megasoft_v2_card_name'] ?? '' ),
             'cvv'            => sanitize_text_field( $_POST['megasoft_v2_card_cvv'] ?? '' ),
             'expiry'         => $card_expiry,
-            'expiry_yyyymm'  => $expiry_yyyymm,
+            'expiry_yyyymm'  => $expiry_mmaa, // Mantener nombre de variable por compatibilidad, pero ahora es MMAA
             'doc_type'       => sanitize_text_field( $_POST['megasoft_v2_doc_type'] ?? 'V' ),
             'doc_number'     => sanitize_text_field( $_POST['megasoft_v2_doc_number'] ?? '' ),
         );
