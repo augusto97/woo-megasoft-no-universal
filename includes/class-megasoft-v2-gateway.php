@@ -564,6 +564,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         @file_put_contents($log_file, "\n[" . date('Y-m-d H:i:s') . "] process_payment INICIADO - Order ID: $order_id\n", FILE_APPEND);
 
         $order = wc_get_order( $order_id );
+        @file_put_contents($log_file, "✓ Order obtenida\n", FILE_APPEND);
 
         $this->logger->info( 'Iniciando procesamiento de pago', array(
             'order_id' => $order_id,
@@ -572,18 +573,24 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
 
         try {
             // Get card data from POST
+            @file_put_contents($log_file, "Obteniendo datos de tarjeta...\n", FILE_APPEND);
             $card_data = $this->get_card_data_from_post();
+            @file_put_contents($log_file, "✓ Datos de tarjeta obtenidos\n", FILE_APPEND);
 
             // Step 1: Pre-registro to get control number
+            @file_put_contents($log_file, "Llamando a preregistro()...\n", FILE_APPEND);
             $this->logger->debug( 'Llamando a pre-registro', array( 'order_id' => $order_id ) );
 
             $preregistro_response = $this->api->preregistro();
+            @file_put_contents($log_file, "✓ Preregistro completado\n", FILE_APPEND);
 
             if ( ! $preregistro_response['success'] ) {
+                @file_put_contents($log_file, "ERROR: Preregistro falló - " . ($preregistro_response['message'] ?? 'Sin mensaje') . "\n", FILE_APPEND);
                 throw new Exception( $preregistro_response['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
             }
 
             $control_number = $preregistro_response['control'];
+            @file_put_contents($log_file, "✓ Control number: $control_number\n", FILE_APPEND);
 
             $this->logger->info( 'Pre-registro exitoso', array(
                 'order_id' => $order_id,
@@ -591,12 +598,16 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             ) );
 
             // Save control number to order meta
+            @file_put_contents($log_file, "Guardando control en order meta...\n", FILE_APPEND);
             $order->update_meta_data( '_megasoft_v2_control', $control_number );
             $order->save();
+            @file_put_contents($log_file, "✓ Control guardado\n", FILE_APPEND);
 
             // Step 2: Process payment based on card type
             $card_type = sanitize_text_field( $_POST['megasoft_v2_card_type'] ?? 'CREDITO' );
+            @file_put_contents($log_file, "Tipo de tarjeta: $card_type\n", FILE_APPEND);
 
+            @file_put_contents($log_file, "Preparando payment_data array...\n", FILE_APPEND);
             $payment_data = array(
                 'control'    => $control_number,
                 'monto'      => $order->get_total(),
@@ -609,6 +620,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 'email'      => $order->get_billing_email(),
                 'telefono'   => $order->get_billing_phone(),
             );
+            @file_put_contents($log_file, "✓ payment_data preparado\n", FILE_APPEND);
 
             $this->logger->debug( 'Procesando pago', array(
                 'order_id'  => $order_id,
@@ -617,34 +629,42 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             ) );
 
             // Call appropriate API method
+            @file_put_contents($log_file, "Llamando a procesar_compra_credito()...\n", FILE_APPEND);
             if ( $card_type === 'DEBITO' ) {
                 $payment_response = $this->api->procesar_compra_credito( $payment_data, 'DEBITO' );
             } else {
                 $payment_response = $this->api->procesar_compra_credito( $payment_data, 'CREDITO' );
             }
+            @file_put_contents($log_file, "✓ procesar_compra_credito completado\n", FILE_APPEND);
 
             // Step 3: Check response
             if ( ! $payment_response['success'] ) {
+                @file_put_contents($log_file, "ERROR: procesar_compra_credito falló - " . ($payment_response['message'] ?? 'Sin mensaje') . "\n", FILE_APPEND);
                 throw new Exception( $payment_response['message'] ?? __( 'Error al procesar el pago', 'woocommerce-megasoft-gateway-v2' ) );
             }
 
             // Step 4: Query status to confirm
+            @file_put_contents($log_file, "Llamando a query_status()...\n", FILE_APPEND);
             $this->logger->debug( 'Consultando estado de transacción', array(
                 'order_id' => $order_id,
                 'control'  => $control_number,
             ) );
 
             $status_response = $this->api->query_status( $control_number, $card_type );
+            @file_put_contents($log_file, "✓ query_status completado\n", FILE_APPEND);
 
             if ( ! $status_response['success'] ) {
+                @file_put_contents($log_file, "ERROR: query_status falló - " . ($status_response['message'] ?? 'Sin mensaje') . "\n", FILE_APPEND);
                 throw new Exception( $status_response['message'] ?? __( 'Error al consultar estado', 'woocommerce-megasoft-gateway-v2' ) );
             }
 
             // Check if approved
             $response_code = $status_response['codigo'] ?? '';
+            @file_put_contents($log_file, "Código de respuesta: $response_code\n", FILE_APPEND);
 
             if ( $response_code === '00' ) {
                 // Payment approved!
+                @file_put_contents($log_file, "✓ PAGO APROBADO\n", FILE_APPEND);
                 $this->logger->info( 'Pago aprobado', array(
                     'order_id' => $order_id,
                     'control'  => $control_number,
@@ -652,13 +672,19 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 ) );
 
                 // Save transaction data
+                @file_put_contents($log_file, "Guardando transaction data...\n", FILE_APPEND);
                 $this->save_transaction_data( $order, $status_response, $card_data );
+                @file_put_contents($log_file, "✓ Transaction data guardado\n", FILE_APPEND);
 
                 // Generate and save voucher
+                @file_put_contents($log_file, "Generando voucher...\n", FILE_APPEND);
                 $this->generate_and_save_voucher( $order, $card_data, $status_response );
+                @file_put_contents($log_file, "✓ Voucher generado\n", FILE_APPEND);
 
                 // Mark order as processing/completed
+                @file_put_contents($log_file, "Marcando orden como completada...\n", FILE_APPEND);
                 $order->payment_complete( $control_number );
+                @file_put_contents($log_file, "✓ Orden completada\n", FILE_APPEND);
 
                 $order->add_order_note(
                     sprintf(
@@ -669,9 +695,12 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 );
 
                 // Clear cart
+                @file_put_contents($log_file, "Limpiando carrito...\n", FILE_APPEND);
                 WC()->cart->empty_cart();
+                @file_put_contents($log_file, "✓ Carrito limpiado\n", FILE_APPEND);
 
                 // Return success with redirect to thank you page
+                @file_put_contents($log_file, "✓✓✓ PROCESO COMPLETADO CON ÉXITO ✓✓✓\n\n", FILE_APPEND);
                 return array(
                     'result'   => 'success',
                     'redirect' => $this->get_return_url( $order ),
@@ -679,6 +708,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
 
             } else {
                 // Payment declined
+                @file_put_contents($log_file, "✗ PAGO RECHAZADO - Código: $response_code\n", FILE_APPEND);
                 $error_message = $status_response['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
 
                 $this->logger->warn( 'Pago rechazado', array(
@@ -689,10 +719,13 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 ) );
 
                 // Generate and save voucher for rejected payment
+                @file_put_contents($log_file, "Generando voucher de rechazo...\n", FILE_APPEND);
                 $this->generate_and_save_voucher( $order, $card_data, $status_response );
+                @file_put_contents($log_file, "✓ Voucher de rechazo generado\n", FILE_APPEND);
 
                 $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $response_code, $error_message ) );
 
+                @file_put_contents($log_file, "Lanzando excepción: $error_message\n\n", FILE_APPEND);
                 throw new Exception( $error_message );
             }
 
