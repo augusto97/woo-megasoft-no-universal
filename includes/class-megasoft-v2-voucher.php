@@ -357,7 +357,13 @@ class MegaSoft_V2_Voucher {
      * @return bool Success
      */
     public static function save_to_order( $order_id, $voucher_html ) {
-        return update_post_meta( $order_id, '_megasoft_voucher_html', $voucher_html );
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return false;
+        }
+        $order->update_meta_data( '_megasoft_voucher_html', $voucher_html );
+        $order->save();
+        return true;
     }
 
     /**
@@ -367,7 +373,11 @@ class MegaSoft_V2_Voucher {
      * @return string|false Voucher HTML or false if not found
      */
     public static function get_from_order( $order_id ) {
-        return get_post_meta( $order_id, '_megasoft_voucher_html', true );
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return false;
+        }
+        return $order->get_meta( '_megasoft_voucher_html' );
     }
 
     /**
