@@ -418,29 +418,146 @@ class MegaSoft_V2_API {
     }
 
     /**
-     * Procesar anulación de transacción
+     * Procesar anulación de transacción (Tarjetas de Crédito)
      * Endpoint: v2-procesar-anulacion
      *
-     * @param string $control Número de control de la transacción a anular
-     * @param string $amount Monto a anular
+     * @param array $data Datos de anulación:
+     *   - control: Número de control de la transacción original
+     *   - terminal: Terminal de la transacción original
+     *   - seqnum: Número de secuencia de la transacción original
+     *   - monto: Monto de la transacción original
+     *   - factura: Número de factura
+     *   - referencia: Referencia de la transacción original
+     *   - ult: Últimos 4 dígitos de la tarjeta
+     *   - authid: Authorization ID de la transacción original
      * @return array|WP_Error
      */
-    public function procesar_anulacion( $control, $amount ) {
+    public function procesar_anulacion( $data ) {
         $xml_data = array(
             'cod_afiliacion' => $this->cod_afiliacion,
-            'control'        => $control,
-            'amount'         => $amount,
+            'control'        => $data['control'],
+            'terminal'       => $data['terminal'],
+            'seqnum'         => $data['seqnum'],
+            'monto'          => $data['monto'],
+            'factura'        => $data['factura'],
+            'referencia'     => $data['referencia'],
+            'ult'            => $data['ult'],
+            'authid'         => $data['authid'],
         );
 
         $xml_body = $this->build_xml( $xml_data );
 
+        $this->log( 'info', 'Procesando anulación', array(
+            'control' => $data['control'],
+            'terminal' => $data['terminal'],
+        ) );
+
         $response = $this->do_post_request( 'v2-procesar-anulacion', $xml_body, 60 );
 
         if ( is_wp_error( $response ) ) {
+            $this->log( 'error', 'Error en anulación: ' . $response->get_error_message() );
+            return $response;
+        }
+
+        $this->log( 'info', 'Respuesta de anulación recibida', array( 'codigo' => $response['codigo'] ?? '99' ) );
+
+        return $this->normalize_transaction_response( $response );
+    }
+
+    /**
+     * Procesar anulación de Pago Móvil C2P
+     * Endpoint: v2-procesar-anulacion-c2p
+     *
+     * @param array $data Datos de anulación:
+     *   - control: Número de control
+     *   - cid: Identificación del cliente
+     *   - telefono: Teléfono del cliente (11 dígitos)
+     *   - seqnum: Número de secuencia
+     * @return array|WP_Error
+     */
+    public function procesar_anulacion_c2p( $data ) {
+        $xml_data = array(
+            'cod_afiliacion' => $this->cod_afiliacion,
+            'control'        => $data['control'],
+            'cid'            => $data['cid'],
+            'telefono'       => $data['telefono'],
+            'seqnum'         => $data['seqnum'],
+        );
+
+        $xml_body = $this->build_xml( $xml_data );
+
+        $this->log( 'info', 'Procesando anulación C2P', array( 'control' => $data['control'] ) );
+
+        $response = $this->do_post_request( 'v2-procesar-anulacion-c2p', $xml_body, 60 );
+
+        if ( is_wp_error( $response ) ) {
+            $this->log( 'error', 'Error en anulación C2P: ' . $response->get_error_message() );
             return $response;
         }
 
         return $this->normalize_transaction_response( $response );
+    }
+
+    /**
+     * Procesar cierre de todas las cajas de la afiliación
+     * Endpoint: v2-procesar-cierre
+     *
+     * @return array|WP_Error
+     */
+    public function procesar_cierre() {
+        $xml_data = array(
+            'cod_afiliacion' => $this->cod_afiliacion,
+        );
+
+        $xml_body = $this->build_xml( $xml_data );
+
+        $this->log( 'info', 'Procesando cierre de cajas', array( 'afiliacion' => $this->cod_afiliacion ) );
+
+        $response = $this->do_post_request( 'v2-procesar-cierre', $xml_body, 90 );
+
+        if ( is_wp_error( $response ) ) {
+            $this->log( 'error', 'Error en cierre: ' . $response->get_error_message() );
+            return $response;
+        }
+
+        // Parse response for cierre (returns vterminales array)
+        $success = true;
+        $terminals = array();
+
+        if ( isset( $response['vterminales']['vterminal'] ) ) {
+            $vterminals = $response['vterminales']['vterminal'];
+
+            // Ensure it's an array
+            if ( ! isset( $vterminals[0] ) ) {
+                $vterminals = array( $vterminals );
+            }
+
+            foreach ( $vterminals as $vterminal ) {
+                $terminal_code = $vterminal['codigo'] ?? '99';
+                $terminals[] = array(
+                    'vtid'        => $vterminal['vtid'] ?? '',
+                    'codigo'      => $terminal_code,
+                    'descripcion' => $vterminal['descripcion'] ?? '',
+                    'seqnum'      => $vterminal['seqnum'] ?? '',
+                    'success'     => $terminal_code === '00',
+                );
+
+                if ( $terminal_code !== '00' ) {
+                    $success = false;
+                }
+            }
+        }
+
+        $this->log( 'info', 'Respuesta de cierre recibida', array(
+            'success' => $success,
+            'terminals_count' => count( $terminals ),
+        ) );
+
+        return array(
+            'success'   => $success,
+            'terminals' => $terminals,
+            'raw_response' => $response,
+        );
     }
 
     /**
