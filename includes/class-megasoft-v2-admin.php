@@ -162,138 +162,214 @@ class MegaSoft_V2_Admin {
      */
     public function render_dashboard_page() {
         $stats = $this->get_dashboard_stats();
-        $recent_transactions = $this->get_recent_transactions( 10 );
+        $recent_transactions = $this->get_recent_transactions( 5 );
 
         ?>
         <div class="wrap megasoft-v2-admin">
-            <h1><?php esc_html_e( 'Mega Soft Gateway - Dashboard', 'woocommerce-megasoft-gateway-v2' ); ?></h1>
+            <h1><?php esc_html_e( 'Mega Soft Gateway', 'woocommerce-megasoft-gateway-v2' ); ?></h1>
 
             <!-- Stats Cards -->
             <div class="megasoft-stats-grid">
-                <div class="megasoft-stat-card">
-                    <div class="stat-icon dashicons dashicons-cart"></div>
-                    <div class="stat-content">
-                        <h3><?php echo esc_html( $stats['total_transactions'] ); ?></h3>
-                        <p><?php esc_html_e( 'Total Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?></p>
-                    </div>
+                <div class="stat-card">
+                    <h3><?php esc_html_e( 'Total Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div class="stat-number"><?php echo esc_html( $stats['total_transactions'] ); ?></div>
                 </div>
 
-                <div class="megasoft-stat-card success">
-                    <div class="stat-icon dashicons dashicons-yes-alt"></div>
-                    <div class="stat-content">
-                        <h3><?php echo esc_html( $stats['approved_transactions'] ); ?></h3>
-                        <p><?php esc_html_e( 'Aprobadas', 'woocommerce-megasoft-gateway-v2' ); ?></p>
-                    </div>
+                <div class="stat-card success">
+                    <h3><?php esc_html_e( 'Aprobadas', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div class="stat-number"><?php echo esc_html( $stats['approved_transactions'] ); ?></div>
+                    <?php if ( $stats['total_transactions'] > 0 ) : ?>
+                        <div class="stat-percentage">
+                            <?php echo number_format( ( $stats['approved_transactions'] / $stats['total_transactions'] ) * 100, 1 ); ?>% del total
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <div class="megasoft-stat-card error">
-                    <div class="stat-icon dashicons dashicons-dismiss"></div>
-                    <div class="stat-content">
-                        <h3><?php echo esc_html( $stats['failed_transactions'] ); ?></h3>
-                        <p><?php esc_html_e( 'Rechazadas', 'woocommerce-megasoft-gateway-v2' ); ?></p>
-                    </div>
+                <div class="stat-card error">
+                    <h3><?php esc_html_e( 'Rechazadas', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div class="stat-number"><?php echo esc_html( $stats['failed_transactions'] ); ?></div>
+                    <?php if ( $stats['total_transactions'] > 0 ) : ?>
+                        <div class="stat-percentage">
+                            <?php echo number_format( ( $stats['failed_transactions'] / $stats['total_transactions'] ) * 100, 1 ); ?>% del total
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <div class="megasoft-stat-card warning">
-                    <div class="stat-icon dashicons dashicons-money-alt"></div>
-                    <div class="stat-content">
-                        <h3><?php echo wc_price( $stats['total_amount'] ); ?></h3>
-                        <p><?php esc_html_e( 'Total Procesado', 'woocommerce-megasoft-gateway-v2' ); ?></p>
-                    </div>
+                <div class="stat-card" style="border-top-color: #2271b1;">
+                    <h3><?php esc_html_e( 'Total Procesado', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div class="stat-amount"><?php echo wc_price( $stats['total_amount'] ); ?></div>
                 </div>
             </div>
 
-            <!-- Charts -->
-            <div class="megasoft-charts-grid">
-                <div class="megasoft-chart-card">
-                    <h2><?php esc_html_e( 'Transacciones (Últimos 7 días)', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-                    <canvas id="megasoft-transactions-chart"></canvas>
+            <!-- Charts in Grid -->
+            <div class="megasoft-charts">
+                <div class="chart-container">
+                    <h3><?php esc_html_e( 'Transacciones (Últimos 7 días)', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="megasoft-transactions-chart"></canvas>
+                    </div>
                 </div>
 
-                <div class="megasoft-chart-card">
-                    <h2><?php esc_html_e( 'Tasa de Aprobación', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-                    <canvas id="megasoft-approval-chart"></canvas>
+                <div class="chart-container">
+                    <h3><?php esc_html_e( 'Tasa de Aprobación', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="megasoft-approval-chart"></canvas>
+                    </div>
                 </div>
             </div>
 
             <!-- Recent Transactions -->
             <div class="megasoft-recent-transactions">
                 <h2><?php esc_html_e( 'Transacciones Recientes', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-                <table class="widefat striped">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e( 'ID', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <th><?php esc_html_e( 'Orden', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <th><?php esc_html_e( 'Control', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <th><?php esc_html_e( 'Monto', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <th><?php esc_html_e( 'Estado', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <th><?php esc_html_e( 'Fecha', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ( ! empty( $recent_transactions ) ) : ?>
+                <?php if ( ! empty( $recent_transactions ) ) : ?>
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e( 'Orden', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                                <th><?php esc_html_e( 'Control', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                                <th><?php esc_html_e( 'Monto', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                                <th><?php esc_html_e( 'Tarjeta', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                                <th><?php esc_html_e( 'Estado', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                                <th><?php esc_html_e( 'Fecha', 'woocommerce-megasoft-gateway-v2' ); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             <?php foreach ( $recent_transactions as $transaction ) : ?>
                                 <tr>
-                                    <td><?php echo esc_html( $transaction->id ); ?></td>
                                     <td>
                                         <a href="<?php echo esc_url( admin_url( 'post.php?post=' . $transaction->order_id . '&action=edit' ) ); ?>">
                                             #<?php echo esc_html( $transaction->order_id ); ?>
                                         </a>
                                     </td>
-                                    <td><?php echo esc_html( $transaction->control_number ); ?></td>
-                                    <td><?php echo wc_price( $transaction->amount ); ?></td>
+                                    <td><code style="font-size: 11px;"><?php echo esc_html( $transaction->control_number ); ?></code></td>
+                                    <td><strong><?php echo wc_price( $transaction->amount ); ?></strong></td>
+                                    <td>
+                                        <?php if ( $transaction->card_last_four ) : ?>
+                                            <span style="text-transform: capitalize;"><?php echo esc_html( $transaction->card_type ); ?></span>
+                                            ••••<?php echo esc_html( $transaction->card_last_four ); ?>
+                                        <?php else : ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?php echo $this->get_status_badge( $transaction->status ); ?></td>
                                     <td><?php echo esc_html( mysql2date( 'd/m/Y H:i', $transaction->created_at ) ); ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else : ?>
-                            <tr>
-                                <td colspan="6"><?php esc_html_e( 'No hay transacciones recientes', 'woocommerce-megasoft-gateway-v2' ); ?></td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 15px;">
+                        <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-transactions' ) ); ?>" class="button">
+                            <?php esc_html_e( 'Ver Todas las Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        </a>
+                    </p>
+                <?php else : ?>
+                    <div class="notice notice-info inline">
+                        <p><?php esc_html_e( 'No hay transacciones todavía. Las transacciones aparecerán aquí después del primer pago.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                    </div>
+                <?php endif; ?>
             </div>
 
-            <!-- System Info -->
-            <div class="megasoft-system-info">
-                <h2><?php esc_html_e( 'Información del Sistema', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-                <table class="widefat">
-                    <tbody>
-                        <tr>
-                            <th><?php esc_html_e( 'Versión del Plugin', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <td><?php echo esc_html( MEGASOFT_V2_VERSION ); ?></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e( 'Versión API', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <td><?php echo esc_html( MEGASOFT_V2_API_VERSION ); ?></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e( 'SSL Activo', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <td><?php echo is_ssl() ? '<span class="megasoft-badge success">Sí</span>' : '<span class="megasoft-badge error">No</span>'; ?></td>
-                        </tr>
-                        <tr>
-                            <th><?php esc_html_e( 'URL Webhook', 'woocommerce-megasoft-gateway-v2' ); ?></th>
-                            <td>
-                                <code><?php echo esc_url( MegaSoft_V2_Webhook::get_webhook_url() ); ?></code>
-                                <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('<?php echo esc_js( MegaSoft_V2_Webhook::get_webhook_url() ); ?>')">
-                                    <?php esc_html_e( 'Copiar', 'woocommerce-megasoft-gateway-v2' ); ?>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Quick Links -->
+            <div class="megasoft-quick-actions" style="margin-top: 20px;">
+                <h2><?php esc_html_e( 'Accesos Rápidos', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+                <div class="action-buttons">
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-transactions' ) ); ?>" class="button">
+                        <?php esc_html_e( 'Ver Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-logs' ) ); ?>" class="button">
+                        <?php esc_html_e( 'Ver Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-diagnostics' ) ); ?>" class="button">
+                        <?php esc_html_e( 'Diagnóstico', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=megasoft_v2' ) ); ?>" class="button button-primary">
+                        <?php esc_html_e( 'Configuración', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </div>
             </div>
 
             <script>
-                // Transactions chart data
-                const transactionsData = <?php echo json_encode( $this->get_transactions_chart_data() ); ?>;
+                jQuery(document).ready(function($) {
+                    // Transactions chart data
+                    const transactionsData = <?php echo json_encode( $this->get_transactions_chart_data() ); ?>;
 
-                // Approval rate data
-                const approvalData = {
-                    approved: <?php echo intval( $stats['approved_transactions'] ); ?>,
-                    failed: <?php echo intval( $stats['failed_transactions'] ); ?>
-                };
+                    // Approval rate data
+                    const approvalData = {
+                        approved: <?php echo intval( $stats['approved_transactions'] ); ?>,
+                        failed: <?php echo intval( $stats['failed_transactions'] ); ?>
+                    };
+
+                    // Only render charts if we have Chart.js loaded
+                    if (typeof Chart !== 'undefined') {
+                        // Transactions Line Chart
+                        const transactionsCtx = document.getElementById('megasoft-transactions-chart');
+                        if (transactionsCtx) {
+                            new Chart(transactionsCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: transactionsData.map(d => d.date),
+                                    datasets: [{
+                                        label: '<?php esc_html_e( 'Transacciones', 'woocommerce-megasoft-gateway-v2' ); ?>',
+                                        data: transactionsData.map(d => d.count),
+                                        borderColor: '#2271b1',
+                                        backgroundColor: 'rgba(34, 113, 177, 0.1)',
+                                        tension: 0.4,
+                                        fill: true
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            display: false
+                                        }
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                stepSize: 1
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        // Approval Rate Doughnut Chart
+                        const approvalCtx = document.getElementById('megasoft-approval-chart');
+                        if (approvalCtx && (approvalData.approved > 0 || approvalData.failed > 0)) {
+                            new Chart(approvalCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: [
+                                        '<?php esc_html_e( 'Aprobadas', 'woocommerce-megasoft-gateway-v2' ); ?>',
+                                        '<?php esc_html_e( 'Rechazadas', 'woocommerce-megasoft-gateway-v2' ); ?>'
+                                    ],
+                                    datasets: [{
+                                        data: [approvalData.approved, approvalData.failed],
+                                        backgroundColor: ['#00a32a', '#d63638'],
+                                        borderWidth: 2,
+                                        borderColor: '#fff'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom'
+                                        }
+                                    }
+                                }
+                            });
+                        } else if (approvalCtx) {
+                            // Show message if no data
+                            approvalCtx.parentElement.innerHTML = '<p style="text-align: center; color: #666; padding: 60px 20px;"><?php esc_html_e( 'No hay datos suficientes todavía', 'woocommerce-megasoft-gateway-v2' ); ?></p>';
+                        }
+                    }
+                });
             </script>
         </div>
         <?php
@@ -1204,13 +1280,13 @@ class MegaSoft_V2_Admin {
      */
     private function get_status_badge( $status ) {
         $badges = array(
-            'approved' => '<span class="megasoft-badge success">Aprobada</span>',
-            'failed'   => '<span class="megasoft-badge error">Rechazada</span>',
-            'pending'  => '<span class="megasoft-badge warning">Pendiente</span>',
-            'declined' => '<span class="megasoft-badge error">Declinada</span>',
+            'approved' => '<span class="status-badge status-approved">Aprobada</span>',
+            'failed'   => '<span class="status-badge status-failed">Rechazada</span>',
+            'pending'  => '<span class="status-badge status-pending">Pendiente</span>',
+            'declined' => '<span class="status-badge status-failed">Declinada</span>',
         );
 
-        return $badges[ $status ] ?? '<span class="megasoft-badge">' . esc_html( $status ) . '</span>';
+        return $badges[ $status ] ?? '<span class="status-badge">' . esc_html( ucfirst( $status ) ) . '</span>';
     }
 
     /**
