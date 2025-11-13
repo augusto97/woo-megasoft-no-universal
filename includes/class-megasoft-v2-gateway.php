@@ -637,7 +637,16 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             }
             @file_put_contents($log_file, "✓ procesar_compra_credito completado\n", FILE_APPEND);
 
+            // DEBUG: Log the response
+            @file_put_contents($log_file, "Tipo de respuesta: " . gettype($payment_response) . "\n", FILE_APPEND);
+            @file_put_contents($log_file, "Contenido de respuesta: " . print_r($payment_response, true) . "\n", FILE_APPEND);
+
             // Step 3: Check response
+            if ( ! isset( $payment_response['success'] ) ) {
+                @file_put_contents($log_file, "ERROR FATAL: payment_response no tiene campo 'success'\n", FILE_APPEND);
+                throw new Exception( __( 'Respuesta de API inválida', 'woocommerce-megasoft-gateway-v2' ) );
+            }
+
             if ( ! $payment_response['success'] ) {
                 @file_put_contents($log_file, "ERROR: procesar_compra_credito falló - " . ($payment_response['message'] ?? 'Sin mensaje') . "\n", FILE_APPEND);
                 throw new Exception( $payment_response['message'] ?? __( 'Error al procesar el pago', 'woocommerce-megasoft-gateway-v2' ) );
