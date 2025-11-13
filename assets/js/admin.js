@@ -216,9 +216,12 @@
             var $content = $modal.find('.megasoft-details-content');
 
             // Show modal and loading
-            $modal.show();
+            $modal.css('display', 'block');
             $loading.show();
             $content.hide().html('');
+
+            // Prevent body scroll
+            $('body').css('overflow', 'hidden');
 
             // Fetch transaction details
             $.ajax({
@@ -236,19 +239,35 @@
                         $content.show();
                     } else {
                         alert('Error: ' + (response.data || 'No se pudieron obtener los detalles'));
-                        $modal.hide();
+                        self.closeModal($modal);
                     }
                 },
                 error: function() {
                     alert('Error al cargar los detalles de la transacción');
-                    $modal.hide();
+                    self.closeModal($modal);
                 }
             });
 
             // Close modal handlers
             $modal.find('.megasoft-modal-close, .megasoft-modal-overlay').off('click').on('click', function() {
-                $modal.hide();
+                self.closeModal($modal);
             });
+
+            // Close on Escape key
+            $(document).off('keyup.megasoft-modal').on('keyup.megasoft-modal', function(e) {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                    self.closeModal($modal);
+                }
+            });
+        },
+
+        /**
+         * Close modal and restore body scroll
+         */
+        closeModal: function($modal) {
+            $modal.css('display', 'none');
+            $('body').css('overflow', '');
+            $(document).off('keyup.megasoft-modal');
         },
 
         /**
