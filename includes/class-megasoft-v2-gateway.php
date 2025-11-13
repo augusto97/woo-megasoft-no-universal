@@ -608,17 +608,21 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             @file_put_contents($log_file, "Tipo de tarjeta: $card_type\n", FILE_APPEND);
 
             @file_put_contents($log_file, "Preparando payment_data array...\n", FILE_APPEND);
+
+            // Combinar tipo de documento + número para formar CID
+            $cid = $card_data['doc_type'] . $card_data['doc_number'];
+            @file_put_contents($log_file, "CID formado: $cid\n", FILE_APPEND);
+
+            // Preparar datos según lo que espera la API
             $payment_data = array(
                 'control'    => $control_number,
-                'monto'      => $order->get_total(),
                 'pan'        => $card_data['number'],
                 'cvv2'       => $card_data['cvv'],
+                'cid'        => $cid,
                 'expdate'    => $card_data['expiry_yyyymm'],
-                'titular'    => $card_data['name'],
-                'tipodoc'    => $card_data['doc_type'],
-                'documento'  => $card_data['doc_number'],
-                'email'      => $order->get_billing_email(),
-                'telefono'   => $order->get_billing_phone(),
+                'amount'     => $order->get_total(),
+                'client'     => $card_data['name'],
+                'factura'    => (string) $order->get_order_number(),
             );
             @file_put_contents($log_file, "✓ payment_data preparado\n", FILE_APPEND);
 
@@ -628,13 +632,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 'card_type' => $card_type,
             ) );
 
-            // Call appropriate API method
+            // Call API method (no acepta segundo parámetro)
             @file_put_contents($log_file, "Llamando a procesar_compra_credito()...\n", FILE_APPEND);
-            if ( $card_type === 'DEBITO' ) {
-                $payment_response = $this->api->procesar_compra_credito( $payment_data, 'DEBITO' );
-            } else {
-                $payment_response = $this->api->procesar_compra_credito( $payment_data, 'CREDITO' );
-            }
+            $payment_response = $this->api->procesar_compra_credito( $payment_data );
             @file_put_contents($log_file, "✓ procesar_compra_credito completado\n", FILE_APPEND);
 
             // DEBUG: Log the response
