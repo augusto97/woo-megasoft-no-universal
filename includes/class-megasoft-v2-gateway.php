@@ -90,6 +90,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         // AJAX handlers for frontend validation
         add_action( 'wp_ajax_megasoft_v2_validate_card', array( $this, 'ajax_validate_card' ) );
         add_action( 'wp_ajax_nopriv_megasoft_v2_validate_card', array( $this, 'ajax_validate_card' ) );
+
+        // Email hooks - Add payment info to emails
+        add_action( 'woocommerce_email_after_order_table', array( $this, 'add_payment_info_to_email' ), 10, 4 );
     }
 
     /**
@@ -1014,5 +1017,122 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         );
 
         wp_send_json_success( $response );
+    }
+
+    /**
+     * Add payment information to order emails
+     *
+     * @param WC_Order $order Order object
+     * @param bool $sent_to_admin Whether the email is sent to admin
+     * @param bool $plain_text Whether the email is plain text
+     * @param WC_Email $email Email object
+     */
+    public function add_payment_info_to_email( $order, $sent_to_admin, $plain_text, $email ) {
+        // Only add for Mega Soft orders
+        if ( strpos( $order->get_payment_method(), 'megasoft' ) === false ) {
+            return;
+        }
+
+        // Get payment info
+        $control = $order->get_meta( '_megasoft_v2_control' );
+        $authorization = $order->get_meta( '_megasoft_v2_authorization' );
+        $card_last_four = $order->get_meta( '_megasoft_v2_card_last_four' );
+        $card_type = $order->get_meta( '_megasoft_v2_card_type' );
+        $transaction_date = $order->get_meta( '_megasoft_v2_transaction_date' );
+
+        // Skip if no payment info
+        if ( ! $control && ! $authorization ) {
+            return;
+        }
+
+        if ( $plain_text ) {
+            // Plain text version
+            echo "\n" . str_repeat( '=', 50 ) . "\n";
+            echo __( 'INFORMACIÓN DE PAGO - MEGA SOFT', 'woocommerce-megasoft-gateway-v2' ) . "\n";
+            echo str_repeat( '=', 50 ) . "\n\n";
+
+            if ( $control ) {
+                echo __( 'Número de Control:', 'woocommerce-megasoft-gateway-v2' ) . ' ' . $control . "\n";
+            }
+
+            if ( $authorization ) {
+                echo __( 'Código de Autorización:', 'woocommerce-megasoft-gateway-v2' ) . ' ' . $authorization . "\n";
+            }
+
+            if ( $card_last_four ) {
+                echo __( 'Tarjeta:', 'woocommerce-megasoft-gateway-v2' ) . ' ' . ucfirst( $card_type ) . ' ****' . $card_last_four . "\n";
+            }
+
+            if ( $transaction_date ) {
+                echo __( 'Fecha de Transacción:', 'woocommerce-megasoft-gateway-v2' ) . ' ' . $transaction_date . "\n";
+            }
+
+            echo "\n";
+
+        } else {
+            // HTML version
+            ?>
+            <div style="margin: 30px 0; padding: 20px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+                <h2 style="margin-top: 0; color: #2271b1; font-size: 18px; border-bottom: 2px solid #2271b1; padding-bottom: 10px;">
+                    <?php esc_html_e( 'Información de Pago - Mega Soft', 'woocommerce-megasoft-gateway-v2' ); ?>
+                </h2>
+
+                <table cellspacing="0" cellpadding="0" style="width: 100%; border: 0;">
+                    <?php if ( $control ) : ?>
+                        <tr>
+                            <td style="padding: 8px 0; font-weight: 600; width: 40%;">
+                                <?php esc_html_e( 'Número de Control:', 'woocommerce-megasoft-gateway-v2' ); ?>
+                            </td>
+                            <td style="padding: 8px 0;">
+                                <code style="background: #fff; padding: 4px 8px; border: 1px solid #ddd; border-radius: 3px; font-family: 'Courier New', monospace;">
+                                    <?php echo esc_html( $control ); ?>
+                                </code>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <?php if ( $authorization ) : ?>
+                        <tr>
+                            <td style="padding: 8px 0; font-weight: 600;">
+                                <?php esc_html_e( 'Código de Autorización:', 'woocommerce-megasoft-gateway-v2' ); ?>
+                            </td>
+                            <td style="padding: 8px 0;">
+                                <code style="background: #fff; padding: 4px 8px; border: 1px solid #ddd; border-radius: 3px; font-family: 'Courier New', monospace;">
+                                    <?php echo esc_html( $authorization ); ?>
+                                </code>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <?php if ( $card_last_four ) : ?>
+                        <tr>
+                            <td style="padding: 8px 0; font-weight: 600;">
+                                <?php esc_html_e( 'Tarjeta:', 'woocommerce-megasoft-gateway-v2' ); ?>
+                            </td>
+                            <td style="padding: 8px 0;">
+                                <?php echo esc_html( ucfirst( $card_type ) ); ?> ••••<?php echo esc_html( $card_last_four ); ?>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <?php if ( $transaction_date ) : ?>
+                        <tr>
+                            <td style="padding: 8px 0; font-weight: 600;">
+                                <?php esc_html_e( 'Fecha de Transacción:', 'woocommerce-megasoft-gateway-v2' ); ?>
+                            </td>
+                            <td style="padding: 8px 0;">
+                                <?php echo esc_html( mysql2date( 'd/m/Y H:i', $transaction_date ) ); ?>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </table>
+
+                <p style="margin: 15px 0 0 0; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; font-size: 13px; color: #856404;">
+                    <strong><?php esc_html_e( 'Nota:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                    <?php esc_html_e( 'Conserve esta información para cualquier verificación o reclamo relacionado con el pago.', 'woocommerce-megasoft-gateway-v2' ); ?>
+                </p>
+            </div>
+            <?php
+        }
     }
 }
