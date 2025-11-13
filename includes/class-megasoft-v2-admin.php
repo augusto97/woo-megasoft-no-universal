@@ -503,9 +503,50 @@ class MegaSoft_V2_Admin {
             <h1>
                 <?php esc_html_e( 'Logs del Sistema', 'woocommerce-megasoft-gateway-v2' ); ?>
                 <button type="button" class="page-title-action" id="megasoft-clear-logs">
-                    <?php esc_html_e( 'Limpiar Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    <?php esc_html_e( 'Limpiar Logs BD', 'woocommerce-megasoft-gateway-v2' ); ?>
                 </button>
             </h1>
+
+            <!-- ARCHIVO DE DEBUG (TEMPORAL PARA DIAGNÓSTICO) -->
+            <?php
+            $debug_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+            if ( file_exists( $debug_file ) ) :
+            ?>
+            <div style="margin-top: 20px; margin-bottom: 30px;">
+                <h2>
+                    <?php esc_html_e( 'Log de Debug (Archivo)', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    <a href="?page=megasoft-v2-logs&clear_debug=1" class="button button-small" style="margin-left: 10px;" onclick="return confirm('¿Eliminar archivo de debug?');">
+                        <?php esc_html_e( 'Limpiar', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </h2>
+
+                <?php
+                // Handle clear debug action
+                if ( isset( $_GET['clear_debug'] ) && $_GET['clear_debug'] === '1' ) {
+                    @unlink( $debug_file );
+                    echo '<div class="notice notice-success"><p>' . esc_html__( 'Archivo de debug eliminado.', 'woocommerce-megasoft-gateway-v2' ) . '</p></div>';
+                    echo '<script>window.location.href="?page=megasoft-v2-logs";</script>';
+                } else {
+                ?>
+
+                <div class="notice notice-info inline" style="margin: 10px 0;">
+                    <p>
+                        <strong><?php esc_html_e( 'Ubicación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $debug_file ); ?>
+                        | <strong><?php esc_html_e( 'Tamaño:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo size_format( filesize( $debug_file ) ); ?>
+                        | <strong><?php esc_html_e( 'Modificado:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo date_i18n( 'd/m/Y H:i:s', filemtime( $debug_file ) ); ?>
+                    </p>
+                </div>
+
+                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                    <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.4; white-space: pre-wrap;"><?php echo esc_html( file_get_contents( $debug_file ) ); ?></pre>
+                </div>
+
+                <?php } ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- LOGS DE BASE DE DATOS -->
+            <h2 style="margin-top: 30px;"><?php esc_html_e( 'Logs de Base de Datos', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
 
             <!-- Info -->
             <?php if ( ! $table_exists || $total === 0 ) : ?>
