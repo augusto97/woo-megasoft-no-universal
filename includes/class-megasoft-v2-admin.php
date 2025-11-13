@@ -557,15 +557,17 @@ class MegaSoft_V2_Admin {
                 </div>
             <?php endif; ?>
 
-            <!-- Transaction Details Modal -->
-            <div id="megasoft-transaction-modal" class="megasoft-modal" style="display: none;">
-                <div class="megasoft-modal-overlay"></div>
-                <div class="megasoft-modal-content">
-                    <div class="megasoft-modal-header">
+            <!-- Transaction Details Sidebar -->
+            <div id="megasoft-transaction-sidebar" class="megasoft-sidebar">
+                <div class="megasoft-sidebar-overlay"></div>
+                <div class="megasoft-sidebar-panel">
+                    <div class="megasoft-sidebar-header">
                         <h2><?php esc_html_e( 'Detalles de Transacción', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-                        <button class="megasoft-modal-close" type="button">&times;</button>
+                        <button class="megasoft-sidebar-close" type="button">
+                            <span class="dashicons dashicons-no-alt"></span>
+                        </button>
                     </div>
-                    <div class="megasoft-modal-body">
+                    <div class="megasoft-sidebar-body">
                         <div class="megasoft-loading" style="text-align: center; padding: 40px;">
                             <span class="spinner is-active" style="float: none;"></span>
                             <p><?php esc_html_e( 'Cargando detalles...', 'woocommerce-megasoft-gateway-v2' ); ?></p>
