@@ -507,10 +507,13 @@ class MegaSoft_V2_Admin {
                 </button>
             </h1>
 
-            <!-- ARCHIVO DE DEBUG (TEMPORAL PARA DIAGNÓSTICO) -->
+            <!-- ARCHIVO DE DEBUG (NUEVO SISTEMA) -->
             <?php
-            $debug_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
-            if ( file_exists( $debug_file ) ) :
+            $debug_file = MEGASOFT_V2_PLUGIN_PATH . 'megasoft-debug.log';
+            $old_debug_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+            $file_to_show = file_exists( $debug_file ) ? $debug_file : ( file_exists( $old_debug_file ) ? $old_debug_file : null );
+
+            if ( $file_to_show ) :
             ?>
             <div style="margin-top: 20px; margin-bottom: 30px;">
                 <h2>
@@ -524,24 +527,31 @@ class MegaSoft_V2_Admin {
                 // Handle clear debug action
                 if ( isset( $_GET['clear_debug'] ) && $_GET['clear_debug'] === '1' ) {
                     @unlink( $debug_file );
-                    echo '<div class="notice notice-success"><p>' . esc_html__( 'Archivo de debug eliminado.', 'woocommerce-megasoft-gateway-v2' ) . '</p></div>';
+                    @unlink( $old_debug_file );
+                    echo '<div class="notice notice-success"><p>' . esc_html__( 'Archivos de debug eliminados.', 'woocommerce-megasoft-gateway-v2' ) . '</p></div>';
                     echo '<script>window.location.href="?page=megasoft-v2-logs";</script>';
                 } else {
                 ?>
 
                 <div class="notice notice-info inline" style="margin: 10px 0;">
                     <p>
-                        <strong><?php esc_html_e( 'Ubicación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $debug_file ); ?>
-                        | <strong><?php esc_html_e( 'Tamaño:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo size_format( filesize( $debug_file ) ); ?>
-                        | <strong><?php esc_html_e( 'Modificado:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo date_i18n( 'd/m/Y H:i:s', filemtime( $debug_file ) ); ?>
+                        <strong><?php esc_html_e( 'Ubicación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $file_to_show ); ?>
+                        | <strong><?php esc_html_e( 'Tamaño:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo size_format( filesize( $file_to_show ) ); ?>
+                        | <strong><?php esc_html_e( 'Modificado:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo date_i18n( 'd/m/Y H:i:s', filemtime( $file_to_show ) ); ?>
                     </p>
                 </div>
 
                 <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;">
-                    <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.4; white-space: pre-wrap;"><?php echo esc_html( file_get_contents( $debug_file ) ); ?></pre>
+                    <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.4; white-space: pre-wrap;"><?php echo esc_html( file_get_contents( $file_to_show ) ); ?></pre>
                 </div>
 
                 <?php } ?>
+            </div>
+            <?php else : ?>
+            <div style="margin-top: 20px; margin-bottom: 30px;">
+                <div class="notice notice-info">
+                    <p><?php esc_html_e( 'No hay archivo de debug todavía. El archivo se creará automáticamente cuando ocurra la próxima transacción.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                </div>
             </div>
             <?php endif; ?>
 
@@ -658,6 +668,13 @@ class MegaSoft_V2_Admin {
             $clear_logs_result = MegaSoft_V2_Diagnostics::clear_old_logs( $days );
         }
 
+        // Handle reinstall tables request
+        $reinstall_result = null;
+        if ( isset( $_POST['reinstall_tables'] ) && check_admin_referer( 'megasoft_reinstall_tables' ) ) {
+            $reinstall_result = MegaSoft_V2_Installer::install();
+            $reinstall_result['message'] = 'Tablas reinstaladas correctamente';
+        }
+
         // Get system info
         $system_info = MegaSoft_V2_Diagnostics::get_system_info();
         $logs_count = MegaSoft_V2_Diagnostics::get_logs_count();
@@ -669,6 +686,13 @@ class MegaSoft_V2_Admin {
             <?php if ( $clear_logs_result ) : ?>
                 <div class="notice notice-success is-dismissible">
                     <p><?php echo esc_html( $clear_logs_result['message'] ); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if ( $reinstall_result ) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><strong><?php echo esc_html( $reinstall_result['message'] ); ?></strong></p>
+                    <p>Verificación: <?php print_r( $reinstall_result['verification'] ); ?></p>
                 </div>
             <?php endif; ?>
 
@@ -739,6 +763,17 @@ class MegaSoft_V2_Admin {
                         <?php esc_html_e( 'Ver Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
                     </a>
                 </p>
+
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
+                    <h3 style="margin-top: 0;"><?php esc_html_e( '🔧 Herramienta de Reparación', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <p><?php esc_html_e( 'Si las tablas no existen o los datos no se están guardando, usa este botón para reinstalar las tablas de la base de datos:', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                    <form method="post" action="" style="margin-top: 10px;">
+                        <?php wp_nonce_field( 'megasoft_reinstall_tables' ); ?>
+                        <button type="submit" name="reinstall_tables" class="button button-primary" onclick="return confirm('¿Estás seguro de reinstalar las tablas? Esta acción es segura y no borrará datos existentes.');">
+                            <?php esc_html_e( 'Reinstalar Tablas de Base de Datos', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <!-- System Information -->
@@ -1119,31 +1154,23 @@ class MegaSoft_V2_Admin {
      * Get dashboard statistics
      */
     private function get_dashboard_stats() {
-        global $wpdb;
+        // Use new simplified transaction saver
+        $stats = MegaSoft_V2_Transaction_Saver::get_stats();
 
-        $table_name = $wpdb->prefix . 'megasoft_v2_transactions';
-
-        $stats = array(
-            'total_transactions'    => $wpdb->get_var( "SELECT COUNT(*) FROM $table_name" ),
-            'approved_transactions' => $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE status = 'approved'" ),
-            'failed_transactions'   => $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE status IN ('failed', 'declined')" ),
-            'total_amount'          => $wpdb->get_var( "SELECT SUM(amount) FROM $table_name WHERE status = 'approved'" ),
+        return array(
+            'total_transactions'    => $stats['total'],
+            'approved_transactions' => $stats['approved'],
+            'failed_transactions'   => $stats['failed'],
+            'total_amount'          => $stats['total_amount'],
         );
-
-        return $stats;
     }
 
     /**
      * Get recent transactions
      */
     private function get_recent_transactions( $limit = 10 ) {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'megasoft_v2_transactions';
-
-        return $wpdb->get_results(
-            "SELECT * FROM $table_name ORDER BY created_at DESC LIMIT " . intval( $limit )
-        );
+        // Use new simplified transaction saver
+        return MegaSoft_V2_Transaction_Saver::get_recent( $limit );
     }
 
     /**

@@ -78,6 +78,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             $this->get_option( 'log_level', 'info' )
         );
 
+        // Simple logger for reliable logging
+        $this->simple_logger = new MegaSoft_V2_Simple_Logger( $this->debug );
+
         // Hooks
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
@@ -743,56 +746,38 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
      * @param array $card_data Card data (sanitized)
      */
     private function save_transaction_data( $order, $response, $card_data ) {
-        global $wpdb;
+        // Log attempt
+        $this->simple_logger->info( 'Intentando guardar transacción', array(
+            'order_id' => $order->get_id(),
+            'control' => $response['control'] ?? 'N/A',
+        ) );
 
-        $table_name = $wpdb->prefix . 'megasoft_v2_transactions';
+        // Use new simplified transaction saver
+        $result = MegaSoft_V2_Transaction_Saver::save( $order, $response, $card_data );
 
-        // Get last 4 digits of card
-        $last_four = substr( $card_data['number'], -4 );
+        if ( $result === false ) {
+            $this->simple_logger->error( 'Error al guardar transacción', array(
+                'order_id' => $order->get_id(),
+                'control' => $response['control'] ?? 'N/A',
+            ) );
 
-        $insert_result = $wpdb->insert(
-            $table_name,
-            array(
-                'order_id'             => $order->get_id(),
-                'control_number'       => $response['control'] ?? '',
-                'authorization_code'   => $response['autorizacion'] ?? '',
-                'transaction_type'     => sanitize_text_field( $_POST['megasoft_v2_card_type'] ?? 'CREDITO' ),
-                'amount'               => $order->get_total(),
-                'currency'             => $order->get_currency(),
-                'card_last_four'       => $last_four,
-                'card_type'            => $this->detect_card_brand( $card_data['number'] ),
-                'response_code'        => $response['codigo'] ?? '',
-                'response_message'     => $response['mensaje'] ?? '',
-                'transaction_date'     => $response['fecha'] ?? current_time( 'mysql' ),
-                'status'               => 'approved',
-                'raw_response'         => json_encode( $response ),
-                'created_at'           => current_time( 'mysql' ),
-            ),
-            array( '%d', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
-        );
-
-        // Log if insert failed
-        if ( $insert_result === false ) {
+            // Also log to old logger
             $this->logger->error( 'Error al guardar transacción en BD', array(
                 'order_id' => $order->get_id(),
-                'wpdb_error' => $wpdb->last_error,
             ) );
         } else {
+            $this->simple_logger->info( 'Transacción guardada exitosamente', array(
+                'order_id' => $order->get_id(),
+                'control' => $response['control'] ?? 'N/A',
+                'insert_id' => $result,
+            ) );
+
+            // Also log to old logger
             $this->logger->info( 'Transacción guardada en BD', array(
                 'order_id' => $order->get_id(),
                 'control' => $response['control'] ?? '',
             ) );
         }
-
-        // Save to order meta as well (including fields needed for refunds)
-        $order->update_meta_data( '_megasoft_v2_control', $response['control'] ?? '' );
-        $order->update_meta_data( '_megasoft_v2_authorization', $response['autorizacion'] ?? '' );
-        $order->update_meta_data( '_megasoft_v2_card_last_four', $last_four );
-        $order->update_meta_data( '_megasoft_v2_card_type', $this->detect_card_brand( $card_data['number'] ) );
-        $order->update_meta_data( '_megasoft_v2_terminal', $response['terminal'] ?? '' );
-        $order->update_meta_data( '_megasoft_v2_seqnum', $response['seqnum'] ?? '' );
-        $order->update_meta_data( '_megasoft_v2_referencia', $response['referencia'] ?? '' );
-        $order->save();
     }
 
     /**
