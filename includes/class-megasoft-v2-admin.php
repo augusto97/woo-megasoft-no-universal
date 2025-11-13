@@ -42,9 +42,11 @@ class MegaSoft_V2_Admin {
         // Add meta boxes to order page
         add_action( 'add_meta_boxes', array( $this, 'add_order_meta_boxes' ) );
 
-        // Add columns to orders list
-        add_filter( 'manage_edit-shop_order_columns', array( $this, 'add_order_columns' ) );
-        add_action( 'manage_shop_order_posts_custom_column', array( $this, 'render_order_column' ), 10, 2 );
+        // Add columns to orders list (compatible with HPOS and legacy)
+        add_filter( 'manage_woocommerce_page_wc-orders_columns', array( $this, 'add_order_columns' ) ); // HPOS
+        add_filter( 'manage_edit-shop_order_columns', array( $this, 'add_order_columns' ) ); // Legacy
+        add_action( 'manage_woocommerce_page_wc-orders_custom_column', array( $this, 'render_order_column' ), 10, 2 ); // HPOS
+        add_action( 'manage_shop_order_posts_custom_column', array( $this, 'render_order_column' ), 10, 2 ); // Legacy
 
         // Add voucher download handler
         add_action( 'admin_init', array( $this, 'handle_voucher_download' ) );
@@ -1135,11 +1137,15 @@ class MegaSoft_V2_Admin {
      * Add meta boxes to order page
      */
     public function add_order_meta_boxes() {
+        $screen = wc_get_container()->get( \Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController::class )->custom_orders_table_usage_is_enabled()
+            ? wc_get_page_screen_id( 'shop-order' )
+            : 'shop_order';
+
         add_meta_box(
             'megasoft-v2-transaction-details',
             __( 'Detalles de Transacción Mega Soft', 'woocommerce-megasoft-gateway-v2' ),
             array( $this, 'render_order_meta_box' ),
-            'shop_order',
+            $screen,
             'side',
             'high'
         );
@@ -1148,19 +1154,21 @@ class MegaSoft_V2_Admin {
     /**
      * Render order meta box
      */
-    public function render_order_meta_box( $post ) {
-        $order = wc_get_order( $post->ID );
+    public function render_order_meta_box( $post_or_order_object ) {
+        // Compatible with HPOS and legacy
+        $order = ( $post_or_order_object instanceof \WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
 
         if ( ! $order || strpos( $order->get_payment_method(), 'megasoft' ) === false ) {
             echo '<p>' . esc_html__( 'Esta orden no fue procesada con Mega Soft.', 'woocommerce-megasoft-gateway-v2' ) . '</p>';
             return;
         }
 
+        $order_id = $order->get_id();
         $control = $order->get_meta( '_megasoft_v2_control' );
         $authorization = $order->get_meta( '_megasoft_v2_authorization' );
         $card_last_four = $order->get_meta( '_megasoft_v2_card_last_four' );
         $card_type = $order->get_meta( '_megasoft_v2_card_type' );
-        $voucher_html = get_post_meta( $post->ID, '_megasoft_voucher_html', true );
+        $voucher_html = $order->get_meta( '_megasoft_voucher_html' );
 
         ?>
         <div class="megasoft-order-details">
@@ -1191,8 +1199,8 @@ class MegaSoft_V2_Admin {
                     <?php
                     $download_url = add_query_arg( array(
                         'action'   => 'megasoft_download_voucher',
-                        'order_id' => $post->ID,
-                        'nonce'    => wp_create_nonce( 'megasoft_voucher_' . $post->ID ),
+                        'order_id' => $order_id,
+                        'nonce'    => wp_create_nonce( 'megasoft_voucher_' . $order_id ),
                     ), admin_url( 'admin.php' ) );
                     ?>
                     <a href="<?php echo esc_url( $download_url ); ?>" class="button button-secondary" style="margin-top: 5px;">
@@ -1243,7 +1251,7 @@ class MegaSoft_V2_Admin {
         }
 
         if ( $column === 'megasoft_actions' ) {
-            $voucher_html = get_post_meta( $post_id, '_megasoft_voucher_html', true );
+            $voucher_html = $order->get_meta( '_megasoft_voucher_html' );
 
             if ( $voucher_html ) {
                 $download_url = add_query_arg( array(
@@ -1286,15 +1294,20 @@ class MegaSoft_V2_Admin {
             wp_die( __( 'No tienes permisos para realizar esta acción', 'woocommerce-megasoft-gateway-v2' ) );
         }
 
+        // Get order
+        $order = wc_get_order( $order_id );
+
+        if ( ! $order ) {
+            wp_die( __( 'Orden no encontrada', 'woocommerce-megasoft-gateway-v2' ) );
+        }
+
         // Get voucher HTML
-        $voucher_html = get_post_meta( $order_id, '_megasoft_voucher_html', true );
+        $voucher_html = $order->get_meta( '_megasoft_voucher_html' );
 
         if ( ! $voucher_html ) {
             wp_die( __( 'No se encontró el voucher para esta orden', 'woocommerce-megasoft-gateway-v2' ) );
         }
 
-        // Get order
-        $order = wc_get_order( $order_id );
         $control = $order->get_meta( '_megasoft_v2_control' );
 
         // Create filename
