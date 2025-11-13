@@ -116,6 +116,9 @@ function megasoft_v2_requirements_notice() {
 function megasoft_v2_load_files() {
     // Cargar clases base
     $files = array(
+        'includes/class-megasoft-v2-installer.php',
+        'includes/class-megasoft-v2-simple-logger.php',
+        'includes/class-megasoft-v2-transaction-saver.php',
         'includes/class-megasoft-v2-logger.php',
         'includes/class-megasoft-v2-api.php',
         'includes/class-megasoft-v2-gateway.php',
@@ -211,7 +214,16 @@ function megasoft_v2_activate() {
         );
     }
 
-    // Crear tablas de base de datos
+    // Load installer class
+    require_once MEGASOFT_V2_PLUGIN_PATH . 'includes/class-megasoft-v2-installer.php';
+
+    // Crear tablas de base de datos con el nuevo instalador
+    $install_result = MegaSoft_V2_Installer::install();
+
+    // Log installation result
+    error_log( '[MEGASOFT V2] Plugin activated. Installation result: ' . print_r( $install_result, true ) );
+
+    // Crear tablas de base de datos (backup method)
     megasoft_v2_create_tables();
 
     // Establecer opciones por defecto
