@@ -459,29 +459,39 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             $errors->add( 'card_name', __( 'El nombre del titular es requerido.', 'woocommerce-megasoft-gateway-v2' ) );
         }
 
-        // Expiry date
+        // Expiry date - use card validator
         $card_expiry = sanitize_text_field( $_POST['megasoft_v2_card_expiry'] ?? '' );
         if ( empty( $card_expiry ) || ! preg_match( '/^(0[1-9]|1[0-2])\/([0-9]{2})$/', $card_expiry ) ) {
             $errors->add( 'card_expiry', __( 'La fecha de expiración debe estar en formato MM/AA.', 'woocommerce-megasoft-gateway-v2' ) );
         } else {
-            // Check if expired
+            // Check if expired using card validator
             list( $exp_month, $exp_year ) = explode( '/', $card_expiry );
             $exp_year = '20' . $exp_year;
-            if ( ! $this->is_card_not_expired( $exp_month, $exp_year ) ) {
-                $errors->add( 'card_expiry', __( 'La tarjeta ha expirado.', 'woocommerce-megasoft-gateway-v2' ) );
+            $expiry_validation = MegaSoft_V2_Card_Validator::validate_expiry( $exp_month, $exp_year );
+            if ( ! $expiry_validation['valid'] ) {
+                $errors->add( 'card_expiry', $expiry_validation['message'] );
             }
         }
 
-        // CVV
+        // CVV - use card validator with card brand detection
         $card_cvv = sanitize_text_field( $_POST['megasoft_v2_card_cvv'] ?? '' );
-        if ( empty( $card_cvv ) || ! preg_match( '/^[0-9]{3,4}$/', $card_cvv ) ) {
-            $errors->add( 'card_cvv', __( 'El CVV debe tener 3 o 4 dígitos.', 'woocommerce-megasoft-gateway-v2' ) );
+        if ( empty( $card_cvv ) ) {
+            $errors->add( 'card_cvv', __( 'El CVV es requerido.', 'woocommerce-megasoft-gateway-v2' ) );
+        } else {
+            $card_brand = ! empty( $card_number ) ? $this->detect_card_brand( $card_number ) : '';
+            $cvv_validation = MegaSoft_V2_Card_Validator::validate_cvv( $card_cvv, $card_brand );
+            if ( ! $cvv_validation['valid'] ) {
+                $errors->add( 'card_cvv', $cvv_validation['message'] );
+            }
         }
 
-        // Document number
+        // Document number - use CID validator
+        $doc_type = sanitize_text_field( $_POST['megasoft_v2_doc_type'] ?? 'V' );
         $doc_number = sanitize_text_field( $_POST['megasoft_v2_doc_number'] ?? '' );
-        if ( empty( $doc_number ) ) {
-            $errors->add( 'doc_number', __( 'El número de documento es requerido.', 'woocommerce-megasoft-gateway-v2' ) );
+        $cid = $doc_type . $doc_number;
+        $cid_validation = MegaSoft_V2_Card_Validator::validate_cid( $cid );
+        if ( ! $cid_validation['valid'] ) {
+            $errors->add( 'doc_number', $cid_validation['message'] );
         }
 
         // If there are errors, display them
@@ -595,6 +605,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 // Save transaction data
                 $this->save_transaction_data( $order, $status_response, $card_data );
 
+                // Generate and save voucher
+                $this->generate_and_save_voucher( $order, $card_data, $status_response );
+
                 // Mark order as processing/completed
                 $order->payment_complete( $control_number );
 
@@ -625,6 +638,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                     'codigo'   => $response_code,
                     'mensaje'  => $error_message,
                 ) );
+
+                // Generate and save voucher for rejected payment
+                $this->generate_and_save_voucher( $order, $card_data, $status_response );
 
                 $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $response_code, $error_message ) );
 
@@ -706,11 +722,53 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             array( '%d', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
         );
 
-        // Save to order meta as well
+        // Save to order meta as well (including fields needed for refunds)
         $order->update_meta_data( '_megasoft_v2_authorization', $response['autorizacion'] ?? '' );
         $order->update_meta_data( '_megasoft_v2_card_last_four', $last_four );
         $order->update_meta_data( '_megasoft_v2_card_type', $this->detect_card_brand( $card_data['number'] ) );
+        $order->update_meta_data( '_megasoft_v2_terminal', $response['terminal'] ?? '' );
+        $order->update_meta_data( '_megasoft_v2_seqnum', $response['seqnum'] ?? '' );
+        $order->update_meta_data( '_megasoft_v2_referencia', $response['referencia'] ?? '' );
         $order->save();
+    }
+
+    /**
+     * Generate and save voucher for transaction
+     *
+     * @param WC_Order $order Order object
+     * @param array $card_data Card data (sanitized)
+     * @param array $response API response
+     */
+    private function generate_and_save_voucher( $order, $card_data, $response ) {
+        try {
+            // Prepare transaction data for voucher
+            $transaction_data = array(
+                'type'           => sanitize_text_field( $_POST['megasoft_v2_card_type'] ?? 'CREDITO' ),
+                'amount'         => $order->get_total(),
+                'currency'       => $order->get_currency(),
+                'card_last_four' => substr( $card_data['number'], -4 ),
+                'merchant_info'  => array(
+                    'name'    => get_bloginfo( 'name' ),
+                    'address' => get_option( 'woocommerce_store_address' ),
+                ),
+            );
+
+            // Generate voucher HTML
+            $voucher_html = MegaSoft_V2_Voucher::generate( $transaction_data, $response );
+
+            // Save to order meta
+            MegaSoft_V2_Voucher::save_to_order( $order->get_id(), $voucher_html );
+
+            $this->logger->debug( 'Voucher generado y guardado', array(
+                'order_id' => $order->get_id(),
+            ) );
+
+        } catch ( Exception $e ) {
+            $this->logger->error( 'Error al generar voucher', array(
+                'order_id' => $order->get_id(),
+                'error'    => $e->getMessage(),
+            ) );
+        }
     }
 
     /**
@@ -734,32 +792,8 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             return;
         }
 
-        $control = $order->get_meta( '_megasoft_v2_control' );
-        $authorization = $order->get_meta( '_megasoft_v2_authorization' );
-        $card_last_four = $order->get_meta( '_megasoft_v2_card_last_four' );
-        $card_type = $order->get_meta( '_megasoft_v2_card_type' );
-
-        if ( $order->has_status( 'processing' ) || $order->has_status( 'completed' ) ) {
-            ?>
-            <div class="megasoft-v2-voucher">
-                <h2><?php esc_html_e( 'Comprobante de Pago', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
-
-                <div class="voucher-details">
-                    <p><strong><?php esc_html_e( 'Número de Control:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $control ); ?></p>
-                    <p><strong><?php esc_html_e( 'Código de Autorización:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $authorization ); ?></p>
-                    <p><strong><?php esc_html_e( 'Tarjeta:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $card_type ); ?> **** <?php echo esc_html( $card_last_four ); ?></p>
-                    <p><strong><?php esc_html_e( 'Monto:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo wc_price( $order->get_total() ); ?></p>
-                    <p><strong><?php esc_html_e( 'Fecha:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $order->get_date_created()->date_i18n( 'd/m/Y H:i:s' ) ); ?></p>
-                </div>
-
-                <p class="voucher-print">
-                    <button onclick="window.print();" class="button">
-                        <?php esc_html_e( 'Imprimir Comprobante', 'woocommerce-megasoft-gateway-v2' ); ?>
-                    </button>
-                </p>
-            </div>
-            <?php
-        }
+        // Display voucher using the voucher class
+        MegaSoft_V2_Voucher::display_in_order_details( $order );
     }
 
     /**
@@ -783,6 +817,13 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             return new WP_Error( 'no_control', __( 'No se encontró el número de control', 'woocommerce-megasoft-gateway-v2' ) );
         }
 
+        // Get transaction data from order meta
+        $terminal = $order->get_meta( '_megasoft_v2_terminal' );
+        $seqnum = $order->get_meta( '_megasoft_v2_seqnum' );
+        $referencia = $order->get_meta( '_megasoft_v2_referencia' );
+        $card_last_four = $order->get_meta( '_megasoft_v2_card_last_four' );
+        $authid = $order->get_meta( '_megasoft_v2_authorization' );
+
         try {
             $this->logger->info( 'Procesando anulación', array(
                 'order_id' => $order_id,
@@ -790,7 +831,19 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 'amount'   => $amount,
             ) );
 
-            $response = $this->api->procesar_anulacion( $control, $amount );
+            // Prepare anulacion data according to API documentation
+            $anulacion_data = array(
+                'control'    => $control,
+                'terminal'   => $terminal,
+                'seqnum'     => $seqnum,
+                'monto'      => $amount ?? $order->get_total(),
+                'factura'    => (string) $order->get_order_number(),
+                'referencia' => $referencia,
+                'ult'        => $card_last_four,
+                'authid'     => $authid,
+            );
+
+            $response = $this->api->procesar_anulacion( $anulacion_data );
 
             if ( ! $response['success'] ) {
                 throw new Exception( $response['message'] ?? __( 'Error al procesar anulación', 'woocommerce-megasoft-gateway-v2' ) );

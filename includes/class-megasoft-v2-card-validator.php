@@ -524,6 +524,50 @@ class MegaSoft_V2_Card_Validator {
     }
 
     /**
+     * Validate CID (Customer Identification) format
+     * Format: [V|E|J|G|P|C]12345678
+     *
+     * @param string $cid Customer identification
+     * @return array Validation result
+     */
+    public static function validate_cid( $cid ) {
+        $cid = strtoupper( trim( $cid ) );
+
+        if ( empty( $cid ) ) {
+            return array(
+                'valid' => false,
+                'message' => __( 'Identificación es requerida', 'woocommerce-megasoft-gateway-v2' ),
+            );
+        }
+
+        // Valid prefixes according to Mega Soft documentation
+        // V = Venezolano, E = Extranjero, J = Jurídico, G = Gubernamental, P = Pasaporte, C = Nuevo tipo
+        if ( ! preg_match( '/^[VEJGPC][0-9]{4,12}$/', $cid ) ) {
+            return array(
+                'valid' => false,
+                'message' => __( 'Formato de identificación inválido. Debe comenzar con V, E, J, G, P o C seguido de números (ej: V12345678)', 'woocommerce-megasoft-gateway-v2' ),
+            );
+        }
+
+        return array(
+            'valid' => true,
+            'message' => __( 'Identificación válida', 'woocommerce-megasoft-gateway-v2' ),
+            'type' => substr( $cid, 0, 1 ),
+            'number' => substr( $cid, 1 ),
+        );
+    }
+
+    /**
+     * Format CID to uppercase
+     *
+     * @param string $cid Customer identification
+     * @return string Formatted CID
+     */
+    public static function format_cid( $cid ) {
+        return strtoupper( trim( $cid ) );
+    }
+
+    /**
      * Get card info for display (safe for PCI)
      *
      * @param string $card_number Card number
