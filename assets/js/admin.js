@@ -211,12 +211,12 @@
          */
         viewTransactionDetails: function(transactionId) {
             var self = this;
-            var $modal = $('#megasoft-transaction-modal');
-            var $loading = $modal.find('.megasoft-loading');
-            var $content = $modal.find('.megasoft-details-content');
+            var $sidebar = $('#megasoft-transaction-sidebar');
+            var $loading = $sidebar.find('.megasoft-loading');
+            var $content = $sidebar.find('.megasoft-details-content');
 
-            // Show modal and loading
-            $modal.css('display', 'block');
+            // Show sidebar and loading
+            $sidebar.addClass('is-open');
             $loading.show();
             $content.hide().html('');
 
@@ -239,44 +239,44 @@
                         $content.show();
                     } else {
                         alert('Error: ' + (response.data || 'No se pudieron obtener los detalles'));
-                        self.closeModal($modal);
+                        self.closeSidebar($sidebar);
                     }
                 },
                 error: function() {
                     alert('Error al cargar los detalles de la transacción');
-                    self.closeModal($modal);
+                    self.closeSidebar($sidebar);
                 }
             });
 
-            // Close modal handlers
-            $modal.find('.megasoft-modal-close, .megasoft-modal-overlay').off('click').on('click', function() {
-                self.closeModal($modal);
+            // Close sidebar handlers
+            $sidebar.find('.megasoft-sidebar-close, .megasoft-sidebar-overlay').off('click').on('click', function() {
+                self.closeSidebar($sidebar);
             });
 
             // Close on Escape key
-            $(document).off('keyup.megasoft-modal').on('keyup.megasoft-modal', function(e) {
+            $(document).off('keyup.megasoft-sidebar').on('keyup.megasoft-sidebar', function(e) {
                 if (e.key === 'Escape' || e.keyCode === 27) {
-                    self.closeModal($modal);
+                    self.closeSidebar($sidebar);
                 }
             });
         },
 
         /**
-         * Close modal and restore body scroll
+         * Close sidebar and restore body scroll
          */
-        closeModal: function($modal) {
-            $modal.css('display', 'none');
+        closeSidebar: function($sidebar) {
+            $sidebar.removeClass('is-open');
             $('body').css('overflow', '');
-            $(document).off('keyup.megasoft-modal');
+            $(document).off('keyup.megasoft-sidebar');
         },
 
         /**
-         * Render transaction details in modal
+         * Render transaction details in sidebar
          */
         renderTransactionDetails: function(data) {
             var transaction = data.transaction;
             var order = data.order;
-            var $content = $('#megasoft-transaction-modal .megasoft-details-content');
+            var $content = $('#megasoft-transaction-sidebar .megasoft-details-content');
 
             var statusBadges = {
                 'approved': '<span class="status-badge status-approved">Aprobada</span>',
