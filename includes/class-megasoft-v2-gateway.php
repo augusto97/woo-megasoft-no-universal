@@ -59,9 +59,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         $this->testmode             = 'yes' === $this->get_option( 'testmode' );
         $this->api_user             = $this->get_option( 'api_user' );
         $this->api_password         = $this->get_option( 'api_password' );
-        $this->merchant_id          = $this->get_option( 'merchant_id' );
-        $this->terminal_id          = $this->get_option( 'terminal_id' );
-        $this->security_key         = $this->get_option( 'security_key' );
+        $this->cod_afiliacion       = $this->get_option( 'cod_afiliacion' );
         $this->debug                = 'yes' === $this->get_option( 'debug' );
         $this->card_types           = $this->get_option( 'card_types', array( 'visa', 'mastercard' ) );
         $this->auto_capture         = 'yes' === $this->get_option( 'auto_capture', 'yes' );
@@ -69,11 +67,9 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
 
         // Initialize API and Logger
         $this->api = new MegaSoft_V2_API(
+            $this->cod_afiliacion,
             $this->api_user,
             $this->api_password,
-            $this->merchant_id,
-            $this->terminal_id,
-            $this->security_key,
             $this->testmode
         );
 
@@ -144,24 +140,10 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 'default'     => '',
                 'desc_tip'    => true,
             ),
-            'merchant_id' => array(
-                'title'       => __( 'Merchant ID', 'woocommerce-megasoft-gateway-v2' ),
+            'cod_afiliacion' => array(
+                'title'       => __( 'Código de Afiliación', 'woocommerce-megasoft-gateway-v2' ),
                 'type'        => 'text',
-                'description' => __( 'ID de comercio proporcionado por Mega Soft.', 'woocommerce-megasoft-gateway-v2' ),
-                'default'     => '',
-                'desc_tip'    => true,
-            ),
-            'terminal_id' => array(
-                'title'       => __( 'Terminal ID', 'woocommerce-megasoft-gateway-v2' ),
-                'type'        => 'text',
-                'description' => __( 'ID de terminal proporcionado por Mega Soft.', 'woocommerce-megasoft-gateway-v2' ),
-                'default'     => '',
-                'desc_tip'    => true,
-            ),
-            'security_key' => array(
-                'title'       => __( 'Security Key', 'woocommerce-megasoft-gateway-v2' ),
-                'type'        => 'password',
-                'description' => __( 'Clave de seguridad para firmar las transacciones.', 'woocommerce-megasoft-gateway-v2' ),
+                'description' => __( 'Código de afiliación proporcionado por Mega Soft (ej: 1234567).', 'woocommerce-megasoft-gateway-v2' ),
                 'default'     => '',
                 'desc_tip'    => true,
             ),

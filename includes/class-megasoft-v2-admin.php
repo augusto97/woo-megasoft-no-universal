@@ -95,6 +95,16 @@ class MegaSoft_V2_Admin {
             array( $this, 'render_logs_page' )
         );
 
+        // Diagnostics submenu
+        add_submenu_page(
+            'megasoft-v2-dashboard',
+            __( 'Diagnóstico', 'woocommerce-megasoft-gateway-v2' ),
+            __( 'Diagnóstico', 'woocommerce-megasoft-gateway-v2' ),
+            'manage_woocommerce',
+            'megasoft-v2-diagnostics',
+            array( $this, 'render_diagnostics_page' )
+        );
+
         // Settings submenu
         add_submenu_page(
             'megasoft-v2-dashboard',
@@ -558,6 +568,246 @@ class MegaSoft_V2_Admin {
                     </div>
                 </div>
             <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render diagnostics page
+     */
+    public function render_diagnostics_page() {
+        // Get gateway settings
+        $gateway = new WC_Gateway_MegaSoft_V2();
+        $api_user = $gateway->get_option( 'api_user' );
+        $api_password = $gateway->get_option( 'api_password' );
+        $cod_afiliacion = $gateway->get_option( 'cod_afiliacion' );
+        $testmode = 'yes' === $gateway->get_option( 'testmode' );
+
+        // Handle test connection request
+        $test_results = null;
+        if ( isset( $_POST['test_connection'] ) && check_admin_referer( 'megasoft_test_connection' ) ) {
+            $test_results = MegaSoft_V2_Diagnostics::test_connection( $api_user, $api_password, $cod_afiliacion, $testmode );
+        }
+
+        // Handle clear logs request
+        $clear_logs_result = null;
+        if ( isset( $_POST['clear_logs'] ) && check_admin_referer( 'megasoft_clear_logs' ) ) {
+            $days = isset( $_POST['days'] ) ? intval( $_POST['days'] ) : 30;
+            $clear_logs_result = MegaSoft_V2_Diagnostics::clear_old_logs( $days );
+        }
+
+        // Get system info
+        $system_info = MegaSoft_V2_Diagnostics::get_system_info();
+        $logs_count = MegaSoft_V2_Diagnostics::get_logs_count();
+        ?>
+        <div class="wrap megasoft-v2-admin">
+            <h1><?php esc_html_e( 'Diagnóstico del Sistema', 'woocommerce-megasoft-gateway-v2' ); ?></h1>
+
+            <?php if ( $clear_logs_result ) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php echo esc_html( $clear_logs_result['message'] ); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <!-- System Information -->
+            <div class="megasoft-status-card">
+                <h2><?php esc_html_e( 'Información del Sistema', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+                <table class="widefat striped">
+                    <tbody>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Versión del Plugin', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><?php echo esc_html( $system_info['plugin_version'] ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Versión de WordPress', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><?php echo esc_html( $system_info['wordpress_version'] ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Versión de WooCommerce', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><?php echo esc_html( $system_info['woocommerce_version'] ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Versión de PHP', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><?php echo esc_html( $system_info['php_version'] ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'SSL Activo', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td>
+                                <?php if ( $system_info['ssl_active'] ) : ?>
+                                    <span style="color: green;">✓ <?php esc_html_e( 'Activo', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php else : ?>
+                                    <span style="color: red;">✗ <?php esc_html_e( 'Inactivo (REQUERIDO)', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'Versión de BD', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><?php echo esc_html( $system_info['db_version'] ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php esc_html_e( 'URL del Webhook', 'woocommerce-megasoft-gateway-v2' ); ?></strong></td>
+                            <td><code><?php echo esc_html( $system_info['webhook_url'] ); ?></code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 20px;"><?php esc_html_e( 'Extensiones PHP', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                <table class="widefat striped">
+                    <tbody>
+                        <?php foreach ( $system_info['php_extensions'] as $ext => $loaded ) : ?>
+                            <tr>
+                                <td><strong><?php echo esc_html( $ext ); ?></strong></td>
+                                <td>
+                                    <?php if ( $loaded ) : ?>
+                                        <span style="color: green;">✓ <?php esc_html_e( 'Instalado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                    <?php else : ?>
+                                        <span style="color: red;">✗ <?php esc_html_e( 'No instalado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Connection Tester -->
+            <div class="megasoft-status-card" style="margin-top: 20px;">
+                <h2><?php esc_html_e( 'Probar Conexión con Mega Soft', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+
+                <p><?php esc_html_e( 'Verifica que tus credenciales sean correctas y que el servidor pueda conectarse a Mega Soft.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+
+                <form method="post" action="">
+                    <?php wp_nonce_field( 'megasoft_test_connection' ); ?>
+                    <p>
+                        <strong><?php esc_html_e( 'Modo:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                        <?php echo $testmode ? esc_html__( 'Pruebas (paytest.megasoft.com.ve)', 'woocommerce-megasoft-gateway-v2' ) : esc_html__( 'Producción (e-payment.megasoft.com.ve)', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </p>
+                    <button type="submit" name="test_connection" class="button button-primary">
+                        <?php esc_html_e( 'Probar Conexión', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </button>
+                </form>
+
+                <?php if ( $test_results ) : ?>
+                    <div style="margin-top: 20px; padding: 15px; background: <?php echo $test_results['success'] ? '#d4edda' : '#f8d7da'; ?>; border-left: 4px solid <?php echo $test_results['success'] ? '#28a745' : '#dc3545'; ?>;">
+                        <h3>
+                            <?php if ( $test_results['success'] ) : ?>
+                                <span style="color: #155724;">✓ <?php esc_html_e( 'Todas las pruebas pasaron', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                            <?php else : ?>
+                                <span style="color: #721c24;">✗ <?php esc_html_e( 'Algunas pruebas fallaron', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                            <?php endif; ?>
+                        </h3>
+
+                        <?php foreach ( $test_results['tests'] as $test_name => $test ) : ?>
+                            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                                <strong>
+                                    <?php if ( $test['passed'] ) : ?>
+                                        <span style="color: green;">✓</span>
+                                    <?php else : ?>
+                                        <span style="color: red;">✗</span>
+                                    <?php endif; ?>
+                                    <?php echo esc_html( ucfirst( $test_name ) ); ?>:
+                                </strong>
+                                <?php echo esc_html( $test['message'] ); ?>
+
+                                <?php if ( isset( $test['details'] ) ) : ?>
+                                    <details style="margin-top: 5px;">
+                                        <summary style="cursor: pointer; color: #0073aa;"><?php esc_html_e( 'Ver detalles', 'woocommerce-megasoft-gateway-v2' ); ?></summary>
+                                        <pre style="background: #f5f5f5; padding: 10px; margin-top: 5px; overflow-x: auto;"><?php print_r( $test['details'] ); ?></pre>
+                                    </details>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Logs Management -->
+            <div class="megasoft-status-card" style="margin-top: 20px;">
+                <h2><?php esc_html_e( 'Gestión de Logs', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+
+                <p>
+                    <strong><?php esc_html_e( 'Total de logs:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                    <?php echo esc_html( $logs_count['total'] ); ?>
+                </p>
+
+                <?php if ( ! empty( $logs_count['by_level'] ) ) : ?>
+                    <ul>
+                        <?php foreach ( $logs_count['by_level'] as $level => $count ) : ?>
+                            <li>
+                                <span class="log-level log-level-<?php echo esc_attr( strtolower( $level ) ); ?>">
+                                    <?php echo esc_html( strtoupper( $level ) ); ?>
+                                </span>
+                                : <?php echo esc_html( $count ); ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <form method="post" action="" style="margin-top: 15px;">
+                    <?php wp_nonce_field( 'megasoft_clear_logs' ); ?>
+                    <label>
+                        <?php esc_html_e( 'Eliminar logs más antiguos de:', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        <select name="days">
+                            <option value="7">7 días</option>
+                            <option value="30" selected>30 días</option>
+                            <option value="60">60 días</option>
+                            <option value="90">90 días</option>
+                        </select>
+                    </label>
+                    <button type="submit" name="clear_logs" class="button" onclick="return confirm('<?php esc_attr_e( '¿Estás seguro de eliminar logs antiguos?', 'woocommerce-megasoft-gateway-v2' ); ?>');">
+                        <?php esc_html_e( 'Limpiar Logs Antiguos', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </button>
+                </form>
+
+                <p style="margin-top: 15px;">
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=megasoft-v2-logs' ) ); ?>" class="button button-primary">
+                        <?php esc_html_e( 'Ver Todos los Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </p>
+            </div>
+
+            <!-- Required Credentials Info -->
+            <div class="megasoft-status-card" style="margin-top: 20px;">
+                <h2><?php esc_html_e( 'Credenciales Requeridas', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+
+                <p><?php esc_html_e( 'Según la documentación oficial de Mega Soft API v4.24, se requieren únicamente 3 credenciales:', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+
+                <ol>
+                    <li>
+                        <strong><?php esc_html_e( 'Usuario API:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                        <?php esc_html_e( 'Usuario para autenticación Basic Auth', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        <?php if ( ! empty( $api_user ) ) : ?>
+                            <span style="color: green;">✓ <?php esc_html_e( 'Configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php else : ?>
+                            <span style="color: red;">✗ <?php esc_html_e( 'No configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php endif; ?>
+                    </li>
+                    <li>
+                        <strong><?php esc_html_e( 'Contraseña API:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                        <?php esc_html_e( 'Contraseña para autenticación Basic Auth', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        <?php if ( ! empty( $api_password ) ) : ?>
+                            <span style="color: green;">✓ <?php esc_html_e( 'Configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php else : ?>
+                            <span style="color: red;">✗ <?php esc_html_e( 'No configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php endif; ?>
+                    </li>
+                    <li>
+                        <strong><?php esc_html_e( 'Código de Afiliación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                        <?php esc_html_e( 'Código numérico enviado en las peticiones XML (ej: 1234567)', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        <?php if ( ! empty( $cod_afiliacion ) ) : ?>
+                            <span style="color: green;">✓ <?php esc_html_e( 'Configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php else : ?>
+                            <span style="color: red;">✗ <?php esc_html_e( 'No configurado', 'woocommerce-megasoft-gateway-v2' ); ?></span>
+                        <?php endif; ?>
+                    </li>
+                </ol>
+
+                <p>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=megasoft_v2' ) ); ?>" class="button button-primary">
+                        <?php esc_html_e( 'Configurar Credenciales', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </p>
+            </div>
         </div>
         <?php
     }
