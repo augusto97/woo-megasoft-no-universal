@@ -518,11 +518,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             // Step 1: Pre-registro to get control number
             $this->logger->debug( 'Llamando a pre-registro', array( 'order_id' => $order_id ) );
 
-            $preregistro_response = $this->api->preregistro(
-                $order_id,
-                $order->get_total(),
-                $order->get_currency()
-            );
+            $preregistro_response = $this->api->preregistro();
 
             if ( ! $preregistro_response['success'] ) {
                 throw new Exception( $preregistro_response['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
