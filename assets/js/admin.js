@@ -210,9 +210,133 @@
          * View transaction details
          */
         viewTransactionDetails: function(transactionId) {
-            // This could open a modal with full transaction details
-            // For now, we'll just alert
-            alert('Ver detalles de transacción #' + transactionId);
+            var self = this;
+            var $modal = $('#megasoft-transaction-modal');
+            var $loading = $modal.find('.megasoft-loading');
+            var $content = $modal.find('.megasoft-details-content');
+
+            // Show modal and loading
+            $modal.show();
+            $loading.show();
+            $content.hide().html('');
+
+            // Fetch transaction details
+            $.ajax({
+                url: megasoftV2Admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'megasoft_v2_get_transaction_details',
+                    nonce: megasoftV2Admin.nonce,
+                    transaction_id: transactionId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.renderTransactionDetails(response.data);
+                        $loading.hide();
+                        $content.show();
+                    } else {
+                        alert('Error: ' + (response.data || 'No se pudieron obtener los detalles'));
+                        $modal.hide();
+                    }
+                },
+                error: function() {
+                    alert('Error al cargar los detalles de la transacción');
+                    $modal.hide();
+                }
+            });
+
+            // Close modal handlers
+            $modal.find('.megasoft-modal-close, .megasoft-modal-overlay').off('click').on('click', function() {
+                $modal.hide();
+            });
+        },
+
+        /**
+         * Render transaction details in modal
+         */
+        renderTransactionDetails: function(data) {
+            var transaction = data.transaction;
+            var order = data.order;
+            var $content = $('#megasoft-transaction-modal .megasoft-details-content');
+
+            var statusBadges = {
+                'approved': '<span class="status-badge status-approved">Aprobada</span>',
+                'failed': '<span class="status-badge status-failed">Rechazada</span>',
+                'pending': '<span class="status-badge status-pending">Pendiente</span>',
+                'declined': '<span class="status-badge status-failed">Declinada</span>'
+            };
+
+            var html = '<div class="megasoft-transaction-details">';
+
+            // Order Info
+            if (order && order.order_id) {
+                html += '<div class="detail-section">';
+                html += '<h3>Información del Pedido</h3>';
+                html += '<table class="widefat">';
+                html += '<tr><th>Pedido:</th><td><a href="' + order.edit_url + '" target="_blank">#' + order.order_number + '</a></td></tr>';
+                html += '<tr><th>Estado:</th><td>' + order.order_status + '</td></tr>';
+                html += '<tr><th>Cliente:</th><td>' + order.customer + '</td></tr>';
+                html += '<tr><th>Email:</th><td>' + order.email + '</td></tr>';
+                html += '<tr><th>Total:</th><td>' + order.currency + ' ' + order.total + '</td></tr>';
+                html += '<tr><th>Fecha:</th><td>' + order.date + '</td></tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+
+            // Transaction Info
+            html += '<div class="detail-section">';
+            html += '<h3>Información de la Transacción</h3>';
+            html += '<table class="widefat">';
+            html += '<tr><th>ID Transacción:</th><td>' + transaction.id + '</td></tr>';
+            html += '<tr><th>Control:</th><td><code>' + transaction.control_number + '</code></td></tr>';
+            html += '<tr><th>Autorización:</th><td><code>' + (transaction.authorization_code || '-') + '</code></td></tr>';
+            html += '<tr><th>Tipo:</th><td>' + transaction.transaction_type + '</td></tr>';
+            html += '<tr><th>Monto:</th><td>' + transaction.amount + '</td></tr>';
+            html += '<tr><th>Tarjeta:</th><td>' + transaction.card_type + ' ' + transaction.card_last_four + '</td></tr>';
+            html += '<tr><th>Estado:</th><td>' + (statusBadges[transaction.status_class] || transaction.status) + '</td></tr>';
+            html += '<tr><th>Fecha:</th><td>' + transaction.created_at + '</td></tr>';
+            if (transaction.error_message) {
+                html += '<tr><th>Error:</th><td><span style="color: #dc3545;">' + transaction.error_message + '</span></td></tr>';
+            }
+            html += '</table>';
+            html += '</div>';
+
+            // Raw Data (Collapsible)
+            html += '<div class="detail-section">';
+            html += '<h3>Datos Técnicos</h3>';
+
+            if (transaction.raw_request) {
+                html += '<details>';
+                html += '<summary style="cursor: pointer; font-weight: 600; margin-bottom: 10px;">Request XML</summary>';
+                html += '<pre style="background: #f5f5f5; padding: 10px; overflow-x: auto; max-height: 300px;">' + this.escapeHtml(transaction.raw_request) + '</pre>';
+                html += '</details>';
+            }
+
+            if (transaction.raw_response) {
+                html += '<details style="margin-top: 10px;">';
+                html += '<summary style="cursor: pointer; font-weight: 600; margin-bottom: 10px;">Response XML</summary>';
+                html += '<pre style="background: #f5f5f5; padding: 10px; overflow-x: auto; max-height: 300px;">' + this.escapeHtml(transaction.raw_response) + '</pre>';
+                html += '</details>';
+            }
+
+            html += '</div>';
+            html += '</div>';
+
+            $content.html(html);
+        },
+
+        /**
+         * Escape HTML
+         */
+        escapeHtml: function(text) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     };
 

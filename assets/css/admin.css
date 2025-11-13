@@ -525,3 +525,158 @@
         display: none !important;
     }
 }
+
+/* Transaction Details Modal */
+.megasoft-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100000;
+}
+
+.megasoft-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.megasoft-modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    margin: 5vh auto;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.megasoft-modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 4px 4px 0 0;
+}
+
+.megasoft-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #23282d;
+}
+
+.megasoft-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.megasoft-modal-close:hover {
+    color: #000;
+}
+
+.megasoft-modal-body {
+    padding: 25px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.megasoft-transaction-details .detail-section {
+    margin-bottom: 25px;
+}
+
+.megasoft-transaction-details .detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.megasoft-transaction-details h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #2271b1;
+    border-bottom: 2px solid #2271b1;
+    padding-bottom: 8px;
+}
+
+.megasoft-transaction-details table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.megasoft-transaction-details table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    font-weight: 600;
+    width: 30%;
+    border-bottom: 1px solid #ddd;
+}
+
+.megasoft-transaction-details table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #ddd;
+}
+
+.megasoft-transaction-details code {
+    background: #f5f5f5;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.megasoft-transaction-details details {
+    margin-top: 15px;
+}
+
+.megasoft-transaction-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2271b1;
+    user-select: none;
+}
+
+.megasoft-transaction-details summary:hover {
+    color: #135e96;
+}
+
+.megasoft-transaction-details pre {
+    background: #f5f5f5;
+    padding: 15px;
+    overflow-x: auto;
+    max-height: 300px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.megasoft-loading {
+    text-align: center;
+    padding: 40px;
+}
+
+.megasoft-loading .spinner {
+    float: none;
+    margin: 0 auto 15px;
+}
