@@ -54,7 +54,7 @@ class MegaSoft_V2_Admin {
      * Add admin menu pages
      */
     public function add_admin_menu() {
-        // Main menu
+        // Main menu (WordPress automáticamente crea el primer submenu)
         add_menu_page(
             __( 'Mega Soft Gateway', 'woocommerce-megasoft-gateway-v2' ),
             __( 'Mega Soft', 'woocommerce-megasoft-gateway-v2' ),
@@ -63,16 +63,6 @@ class MegaSoft_V2_Admin {
             array( $this, 'render_dashboard_page' ),
             'dashicons-money-alt',
             56
-        );
-
-        // Dashboard submenu
-        add_submenu_page(
-            'megasoft-v2-dashboard',
-            __( 'Dashboard', 'woocommerce-megasoft-gateway-v2' ),
-            __( 'Dashboard', 'woocommerce-megasoft-gateway-v2' ),
-            'manage_woocommerce',
-            'megasoft-v2-dashboard',
-            array( $this, 'render_dashboard_page' )
         );
 
         // Transactions submenu
@@ -85,7 +75,7 @@ class MegaSoft_V2_Admin {
             array( $this, 'render_transactions_page' )
         );
 
-        // Logs submenu
+        // Logs submenu (base de datos)
         add_submenu_page(
             'megasoft-v2-dashboard',
             __( 'Logs', 'woocommerce-megasoft-gateway-v2' ),
@@ -93,16 +83,6 @@ class MegaSoft_V2_Admin {
             'manage_woocommerce',
             'megasoft-v2-logs',
             array( $this, 'render_logs_page' )
-        );
-
-        // Debug Log submenu
-        add_submenu_page(
-            'megasoft-v2-dashboard',
-            __( 'Debug Log', 'woocommerce-megasoft-gateway-v2' ),
-            __( 'Debug Log', 'woocommerce-megasoft-gateway-v2' ),
-            'manage_woocommerce',
-            'megasoft-v2-debug-log',
-            array( $this, 'render_debug_log_page' )
         );
 
         // Diagnostics submenu
@@ -115,14 +95,13 @@ class MegaSoft_V2_Admin {
             array( $this, 'render_diagnostics_page' )
         );
 
-        // Settings submenu
+        // Settings redirect to WooCommerce settings
         add_submenu_page(
             'megasoft-v2-dashboard',
             __( 'Configuración', 'woocommerce-megasoft-gateway-v2' ),
             __( 'Configuración', 'woocommerce-megasoft-gateway-v2' ),
             'manage_woocommerce',
-            'megasoft-v2-settings',
-            array( $this, 'render_settings_page' )
+            'admin.php?page=wc-settings&tab=checkout&section=megasoft_v2'
         );
     }
 
@@ -528,26 +507,19 @@ class MegaSoft_V2_Admin {
                 </button>
             </h1>
 
-            <!-- Debug info -->
+            <!-- Info -->
+            <?php if ( ! $table_exists || $total === 0 ) : ?>
             <div class="notice notice-info" style="margin-top: 20px;">
                 <p>
-                    <strong><?php esc_html_e( 'Estado de la tabla:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
-                    <?php echo $table_exists ? '✓ Tabla existe' : '✗ Tabla NO existe'; ?>
-                    | <strong><?php esc_html_e( 'Total de registros:', 'woocommerce-megasoft-gateway-v2' ); ?></strong> <?php echo esc_html( $total ); ?>
-                </p>
-                <p>
-                    <strong><?php esc_html_e( 'Archivo de debug:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
-                    <?php
-                    $debug_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
-                    if ( file_exists( $debug_file ) ) {
-                        echo '✓ Existe (' . size_format( filesize( $debug_file ) ) . ') - ';
-                        echo '<a href="' . esc_url( admin_url( 'admin.php?page=megasoft-v2-debug-log' ) ) . '">Ver archivo</a>';
-                    } else {
-                        echo '✗ No existe';
-                    }
-                    ?>
+                    <strong><?php esc_html_e( 'Estado:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
+                    <?php if ( ! $table_exists ) : ?>
+                        <?php esc_html_e( 'La tabla de logs no existe. Reactiva el plugin para crearla.', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    <?php elseif ( $total === 0 ) : ?>
+                        <?php esc_html_e( 'No hay logs registrados todavía.', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    <?php endif; ?>
                 </p>
             </div>
+            <?php endif; ?>
 
             <!-- Filters -->
             <div class="megasoft-filters">
@@ -615,57 +587,6 @@ class MegaSoft_V2_Admin {
                         ) );
                         ?>
                     </div>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render debug log file page
-     */
-    public function render_debug_log_page() {
-        $debug_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
-
-        ?>
-        <div class="wrap megasoft-v2-admin">
-            <h1>
-                <?php esc_html_e( 'Debug Log (Archivo)', 'woocommerce-megasoft-gateway-v2' ); ?>
-                <?php if ( file_exists( $debug_file ) ) : ?>
-                    <a href="?page=megasoft-v2-debug-log&clear=1" class="page-title-action" onclick="return confirm('¿Estás seguro de que deseas eliminar el archivo de debug?');">
-                        <?php esc_html_e( 'Limpiar Archivo', 'woocommerce-megasoft-gateway-v2' ); ?>
-                    </a>
-                <?php endif; ?>
-            </h1>
-
-            <?php
-            // Handle clear action
-            if ( isset( $_GET['clear'] ) && $_GET['clear'] === '1' && file_exists( $debug_file ) ) {
-                @unlink( $debug_file );
-                echo '<div class="notice notice-success"><p>' . esc_html__( 'Archivo de debug eliminado.', 'woocommerce-megasoft-gateway-v2' ) . '</p></div>';
-            }
-            ?>
-
-            <?php if ( file_exists( $debug_file ) ) : ?>
-                <div class="notice notice-info">
-                    <p>
-                        <strong><?php esc_html_e( 'Ubicación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
-                        <?php echo esc_html( $debug_file ); ?>
-                        <br>
-                        <strong><?php esc_html_e( 'Tamaño:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
-                        <?php echo size_format( filesize( $debug_file ) ); ?>
-                        <br>
-                        <strong><?php esc_html_e( 'Última modificación:', 'woocommerce-megasoft-gateway-v2' ); ?></strong>
-                        <?php echo date_i18n( 'd/m/Y H:i:s', filemtime( $debug_file ) ); ?>
-                    </p>
-                </div>
-
-                <div style="background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 4px; overflow-x: auto; margin-top: 20px;">
-                    <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5;"><?php echo esc_html( file_get_contents( $debug_file ) ); ?></pre>
-                </div>
-            <?php else : ?>
-                <div class="notice notice-warning">
-                    <p><?php esc_html_e( 'El archivo de debug no existe todavía. Se creará automáticamente cuando se intente procesar un pago.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
                 </div>
             <?php endif; ?>
         </div>
