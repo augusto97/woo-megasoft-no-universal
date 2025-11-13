@@ -411,10 +411,8 @@ add_action( 'admin_notices', 'megasoft_v2_pci_compliance_notice' );
 function megasoft_v2_plugin_action_links( $links ) {
     $settings_link = '<a href="' . admin_url( 'admin.php?page=wc-settings&tab=checkout&section=megasoft_v2' ) . '">' .
         __( 'Configuración', 'woocommerce-megasoft-gateway-v2' ) . '</a>';
-    $docs_link = '<a href="' . admin_url( 'admin.php?page=megasoft-v2-dashboard' ) . '">' .
-        __( 'Dashboard', 'woocommerce-megasoft-gateway-v2' ) . '</a>';
 
-    array_unshift( $links, $settings_link, $docs_link );
+    array_unshift( $links, $settings_link );
 
     return $links;
 }
