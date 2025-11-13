@@ -38,6 +38,7 @@ class MegaSoft_V2_Admin {
         add_action( 'wp_ajax_megasoft_v2_get_stats', array( $this, 'ajax_get_stats' ) );
         add_action( 'wp_ajax_megasoft_v2_process_refund', array( $this, 'ajax_process_refund' ) );
         add_action( 'wp_ajax_megasoft_v2_clear_logs', array( $this, 'ajax_clear_logs' ) );
+        add_action( 'wp_ajax_megasoft_v2_get_transaction_details', array( $this, 'ajax_get_transaction_details' ) );
 
         // Add meta boxes to order page
         add_action( 'add_meta_boxes', array( $this, 'add_order_meta_boxes' ) );
@@ -555,6 +556,24 @@ class MegaSoft_V2_Admin {
                     </div>
                 </div>
             <?php endif; ?>
+
+            <!-- Transaction Details Modal -->
+            <div id="megasoft-transaction-modal" class="megasoft-modal" style="display: none;">
+                <div class="megasoft-modal-overlay"></div>
+                <div class="megasoft-modal-content">
+                    <div class="megasoft-modal-header">
+                        <h2><?php esc_html_e( 'Detalles de Transacción', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+                        <button class="megasoft-modal-close" type="button">&times;</button>
+                    </div>
+                    <div class="megasoft-modal-body">
+                        <div class="megasoft-loading" style="text-align: center; padding: 40px;">
+                            <span class="spinner is-active" style="float: none;"></span>
+                            <p><?php esc_html_e( 'Cargando detalles...', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                        </div>
+                        <div class="megasoft-details-content" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -1598,5 +1617,75 @@ class MegaSoft_V2_Admin {
         wp_send_json_success( array(
             'message' => sprintf( __( '%d logs eliminados', 'woocommerce-megasoft-gateway-v2' ), $deleted ),
         ) );
+    }
+
+    /**
+     * AJAX handler to get transaction details
+     */
+    public function ajax_get_transaction_details() {
+        check_ajax_referer( 'megasoft_v2_admin', 'nonce' );
+
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        $transaction_id = isset( $_POST['transaction_id'] ) ? intval( $_POST['transaction_id'] ) : 0;
+
+        if ( ! $transaction_id ) {
+            wp_send_json_error( 'Invalid transaction ID' );
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'megasoft_v2_transactions';
+
+        $transaction = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $transaction_id
+        ) );
+
+        if ( ! $transaction ) {
+            wp_send_json_error( 'Transaction not found' );
+        }
+
+        // Get order details
+        $order = wc_get_order( $transaction->order_id );
+        $order_data = array();
+
+        if ( $order ) {
+            $order_data = array(
+                'order_id'     => $order->get_id(),
+                'order_number' => $order->get_order_number(),
+                'order_status' => $order->get_status(),
+                'customer'     => $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
+                'email'        => $order->get_billing_email(),
+                'total'        => $order->get_total(),
+                'currency'     => $order->get_currency(),
+                'date'         => $order->get_date_created()->date( 'd/m/Y H:i' ),
+                'edit_url'     => $order->get_edit_order_url(),
+            );
+        }
+
+        // Format transaction data
+        $response = array(
+            'transaction' => array(
+                'id'                 => $transaction->id,
+                'control_number'     => $transaction->control_number,
+                'authorization_code' => $transaction->authorization_code,
+                'transaction_type'   => $transaction->transaction_type,
+                'amount'             => wc_price( $transaction->amount ),
+                'currency'           => $transaction->currency,
+                'card_type'          => $transaction->card_type ? ucfirst( $transaction->card_type ) : '-',
+                'card_last_four'     => $transaction->card_last_four ? '****' . $transaction->card_last_four : '-',
+                'status'             => ucfirst( $transaction->status ),
+                'status_class'       => $transaction->status,
+                'raw_request'        => $transaction->raw_request,
+                'raw_response'       => $transaction->raw_response,
+                'error_message'      => $transaction->error_message,
+                'created_at'         => mysql2date( 'd/m/Y H:i:s', $transaction->created_at ),
+            ),
+            'order' => $order_data,
+        );
+
+        wp_send_json_success( $response );
     }
 }
