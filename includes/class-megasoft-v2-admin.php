@@ -474,12 +474,26 @@ class MegaSoft_V2_Admin {
                 <tbody>
                     <?php if ( ! empty( $transactions ) ) : ?>
                         <?php foreach ( $transactions as $transaction ) : ?>
+                            <?php
+                            // Get order once for efficiency
+                            $order = wc_get_order( $transaction->order_id );
+                            $voucher_html = $order ? $order->get_meta( '_megasoft_voucher_html' ) : '';
+                            ?>
                             <tr>
                                 <td><?php echo esc_html( $transaction->id ); ?></td>
                                 <td>
-                                    <a href="<?php echo esc_url( admin_url( 'post.php?post=' . $transaction->order_id . '&action=edit' ) ); ?>">
-                                        #<?php echo esc_html( $transaction->order_id ); ?>
-                                    </a>
+                                    <?php
+                                    if ( $order ) {
+                                        $edit_url = $order->get_edit_order_url();
+                                        ?>
+                                        <a href="<?php echo esc_url( $edit_url ); ?>">
+                                            #<?php echo esc_html( $transaction->order_id ); ?>
+                                        </a>
+                                        <?php
+                                    } else {
+                                        echo '#' . esc_html( $transaction->order_id );
+                                    }
+                                    ?>
                                 </td>
                                 <td><code><?php echo esc_html( $transaction->control_number ); ?></code></td>
                                 <td><code><?php echo esc_html( $transaction->authorization_code ?: '-' ); ?></code></td>
@@ -495,8 +509,23 @@ class MegaSoft_V2_Admin {
                                 <td><?php echo $this->get_status_badge( $transaction->status ); ?></td>
                                 <td><?php echo esc_html( mysql2date( 'd/m/Y H:i', $transaction->created_at ) ); ?></td>
                                 <td>
-                                    <button type="button" class="button button-small megasoft-view-details" data-transaction-id="<?php echo esc_attr( $transaction->id ); ?>">
-                                        <?php esc_html_e( 'Ver', 'woocommerce-megasoft-gateway-v2' ); ?>
+                                    <?php if ( $voucher_html ) : ?>
+                                        <?php
+                                        $download_url = add_query_arg( array(
+                                            'action'   => 'megasoft_download_voucher',
+                                            'order_id' => $transaction->order_id,
+                                            'nonce'    => wp_create_nonce( 'megasoft_voucher_' . $transaction->order_id ),
+                                        ), admin_url( 'admin.php' ) );
+                                        ?>
+                                        <a href="<?php echo esc_url( $download_url ); ?>" class="button button-small" title="<?php esc_attr_e( 'Descargar Voucher', 'woocommerce-megasoft-gateway-v2' ); ?>">
+                                            <span class="dashicons dashicons-download" style="line-height: 1.4;"></span>
+                                        </a>
+                                    <?php else : ?>
+                                        <span style="color: #999;">—</span>
+                                    <?php endif; ?>
+
+                                    <button type="button" class="button button-small megasoft-view-details" data-transaction-id="<?php echo esc_attr( $transaction->id ); ?>" style="margin-left: 4px;">
+                                        <span class="dashicons dashicons-visibility" style="line-height: 1.4;"></span>
                                     </button>
                                 </td>
                             </tr>
@@ -756,6 +785,12 @@ class MegaSoft_V2_Admin {
             $reinstall_result['message'] = 'Tablas reinstaladas correctamente';
         }
 
+        // Handle migrate vouchers request
+        $migrate_result = null;
+        if ( isset( $_POST['migrate_vouchers'] ) && check_admin_referer( 'megasoft_migrate_vouchers' ) ) {
+            $migrate_result = MegaSoft_V2_Diagnostics::migrate_vouchers();
+        }
+
         // Get system info
         $system_info = MegaSoft_V2_Diagnostics::get_system_info();
         $logs_count = MegaSoft_V2_Diagnostics::get_logs_count();
@@ -774,6 +809,15 @@ class MegaSoft_V2_Admin {
                 <div class="notice notice-success is-dismissible">
                     <p><strong><?php echo esc_html( $reinstall_result['message'] ); ?></strong></p>
                     <p>Verificación: <?php print_r( $reinstall_result['verification'] ); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if ( $migrate_result ) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><strong><?php echo esc_html( $migrate_result['message'] ); ?></strong></p>
+                    <?php if ( $migrate_result['migrated'] > 0 ) : ?>
+                        <p><?php printf( __( 'Se migraron %d vouchers de %d encontrados', 'woocommerce-megasoft-gateway-v2' ), $migrate_result['migrated'], $migrate_result['total'] ); ?></p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
@@ -1012,6 +1056,33 @@ class MegaSoft_V2_Admin {
                         <?php esc_html_e( 'Ver Todos los Logs', 'woocommerce-megasoft-gateway-v2' ); ?>
                     </a>
                 </p>
+            </div>
+
+            <!-- Maintenance Tools -->
+            <div class="megasoft-status-card" style="margin-top: 20px;">
+                <h2><?php esc_html_e( 'Herramientas de Mantenimiento', 'woocommerce-megasoft-gateway-v2' ); ?></h2>
+
+                <div style="margin-bottom: 20px;">
+                    <h3><?php esc_html_e( 'Migración de Vouchers', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <p><?php esc_html_e( 'Si actualizaste de una versión anterior y los vouchers no se muestran en los pedidos, ejecuta esta migración para convertir los vouchers al nuevo formato compatible con HPOS.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                    <form method="post" action="" style="display: inline;">
+                        <?php wp_nonce_field( 'megasoft_migrate_vouchers' ); ?>
+                        <button type="submit" name="migrate_vouchers" class="button" onclick="return confirm('<?php esc_attr_e( '¿Deseas migrar los vouchers antiguos al nuevo formato?', 'woocommerce-megasoft-gateway-v2' ); ?>');">
+                            <?php esc_html_e( 'Migrar Vouchers', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        </button>
+                    </form>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3><?php esc_html_e( 'Reinstalar Tablas de Base de Datos', 'woocommerce-megasoft-gateway-v2' ); ?></h3>
+                    <p><?php esc_html_e( 'Si las tablas de base de datos están corruptas o faltan, puedes reinstalarlas aquí.', 'woocommerce-megasoft-gateway-v2' ); ?></p>
+                    <form method="post" action="" style="display: inline;">
+                        <?php wp_nonce_field( 'megasoft_reinstall_tables' ); ?>
+                        <button type="submit" name="reinstall_tables" class="button" onclick="return confirm('<?php esc_attr_e( '¿Estás seguro de reinstalar las tablas?', 'woocommerce-megasoft-gateway-v2' ); ?>');">
+                            <?php esc_html_e( 'Reinstalar Tablas', 'woocommerce-megasoft-gateway-v2' ); ?>
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <!-- Required Credentials Info -->

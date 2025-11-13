@@ -435,4 +435,68 @@ class MegaSoft_V2_Diagnostics {
             'body'    => wp_remote_retrieve_body( $response ),
         );
     }
+
+    /**
+     * Migrate vouchers from post_meta to WooCommerce meta (HPOS compatible)
+     *
+     * @return array Migration results
+     */
+    public static function migrate_vouchers() {
+        global $wpdb;
+
+        $migrated = 0;
+        $errors = 0;
+
+        // Get all orders with vouchers in post_meta
+        $query = "
+            SELECT post_id, meta_value
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = '_megasoft_voucher_html'
+            AND meta_value != ''
+        ";
+
+        $results = $wpdb->get_results( $query );
+
+        if ( empty( $results ) ) {
+            return array(
+                'success'  => true,
+                'migrated' => 0,
+                'errors'   => 0,
+                'message'  => 'No se encontraron vouchers para migrar',
+            );
+        }
+
+        foreach ( $results as $row ) {
+            $order = wc_get_order( $row->post_id );
+
+            if ( ! $order ) {
+                $errors++;
+                continue;
+            }
+
+            // Check if already migrated
+            $existing = $order->get_meta( '_megasoft_voucher_html' );
+            if ( ! empty( $existing ) ) {
+                continue; // Already migrated
+            }
+
+            // Migrate to WooCommerce meta
+            $order->update_meta_data( '_megasoft_voucher_html', $row->meta_value );
+            $order->save();
+
+            $migrated++;
+        }
+
+        return array(
+            'success'  => true,
+            'migrated' => $migrated,
+            'errors'   => $errors,
+            'total'    => count( $results ),
+            'message'  => sprintf(
+                'Migración completada: %d vouchers migrados, %d errores',
+                $migrated,
+                $errors
+            ),
+        );
+    }
 }
