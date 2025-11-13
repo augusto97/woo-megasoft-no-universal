@@ -123,6 +123,7 @@ function megasoft_v2_load_files() {
         'includes/class-megasoft-v2-card-validator.php',
         'includes/class-megasoft-v2-payment-methods.php',
         'includes/class-megasoft-v2-webhook.php',
+        'includes/class-megasoft-v2-diagnostics.php',
         'includes/class-megasoft-v2-admin.php',
     );
 
