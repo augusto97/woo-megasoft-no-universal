@@ -135,7 +135,7 @@ class MegaSoft_V2_Logger {
 
         $table_name = $wpdb->prefix . 'megasoft_v2_logs';
 
-        $wpdb->insert(
+        $result = $wpdb->insert(
             $table_name,
             array(
                 'order_id'       => $context['order_id'] ?? null,
@@ -147,6 +147,11 @@ class MegaSoft_V2_Logger {
             ),
             array( '%d', '%s', '%s', '%s', '%s', '%s' )
         );
+
+        // If insert failed, log to WordPress error log
+        if ( $result === false && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            error_log( "[MEGASOFT V2 DB ERROR] Failed to insert log into database. Error: " . $wpdb->last_error );
+        }
     }
 
     private function log_critical_error( $message, $context ) {

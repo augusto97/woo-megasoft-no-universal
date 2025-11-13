@@ -331,6 +331,61 @@ class MegaSoft_V2_Diagnostics {
     }
 
     /**
+     * Get database table statistics
+     */
+    public static function get_table_stats() {
+        global $wpdb;
+
+        $stats = array();
+
+        // Transactions table
+        $transactions_table = $wpdb->prefix . 'megasoft_v2_transactions';
+        $stats['transactions'] = array(
+            'total' => 0,
+            'by_status' => array(),
+            'exists' => false,
+        );
+
+        if ( $wpdb->get_var( "SHOW TABLES LIKE '$transactions_table'" ) === $transactions_table ) {
+            $stats['transactions']['exists'] = true;
+            $stats['transactions']['total'] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $transactions_table" );
+
+            $status_counts = $wpdb->get_results(
+                "SELECT status, COUNT(*) as count FROM $transactions_table GROUP BY status",
+                ARRAY_A
+            );
+
+            foreach ( $status_counts as $row ) {
+                $stats['transactions']['by_status'][ $row['status'] ] = (int) $row['count'];
+            }
+        }
+
+        // Logs table
+        $logs_table = $wpdb->prefix . 'megasoft_v2_logs';
+        $stats['logs'] = array(
+            'total' => 0,
+            'by_level' => array(),
+            'exists' => false,
+        );
+
+        if ( $wpdb->get_var( "SHOW TABLES LIKE '$logs_table'" ) === $logs_table ) {
+            $stats['logs']['exists'] = true;
+            $stats['logs']['total'] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $logs_table" );
+
+            $level_counts = $wpdb->get_results(
+                "SELECT level, COUNT(*) as count FROM $logs_table GROUP BY level",
+                ARRAY_A
+            );
+
+            foreach ( $level_counts as $row ) {
+                $stats['logs']['by_level'][ $row['level'] ] = (int) $row['count'];
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
      * Clear logs older than X days
      */
     public static function clear_old_logs( $days = 30 ) {
