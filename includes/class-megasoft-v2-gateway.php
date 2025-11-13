@@ -440,6 +440,15 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
     public function validate_fields() {
         $errors = new WP_Error();
 
+        // Debug logging
+        $this->logger->info( 'validate_fields iniciado', array(
+            'post_data' => array(
+                'card_number_present' => isset( $_POST['megasoft_v2_card_number'] ),
+                'card_name_present' => isset( $_POST['megasoft_v2_card_name'] ),
+                'doc_number_present' => isset( $_POST['megasoft_v2_doc_number'] ),
+            ),
+        ) );
+
         // Validate nonce
         if ( ! isset( $_POST['megasoft_v2_nonce'] ) || ! wp_verify_nonce( $_POST['megasoft_v2_nonce'], 'megasoft_v2_payment' ) ) {
             $errors->add( 'nonce', __( 'Error de seguridad. Por favor recarga la página.', 'woocommerce-megasoft-gateway-v2' ) );
@@ -488,20 +497,33 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         // Document number - use CID validator
         $doc_type = sanitize_text_field( $_POST['megasoft_v2_doc_type'] ?? 'V' );
         $doc_number = sanitize_text_field( $_POST['megasoft_v2_doc_number'] ?? '' );
-        $cid = $doc_type . $doc_number;
-        $cid_validation = MegaSoft_V2_Card_Validator::validate_cid( $cid );
-        if ( ! $cid_validation['valid'] ) {
-            $errors->add( 'doc_number', $cid_validation['message'] );
+
+        // First check if document number is provided
+        if ( empty( $doc_number ) ) {
+            $errors->add( 'doc_number', __( 'El número de documento es requerido.', 'woocommerce-megasoft-gateway-v2' ) );
+        } else {
+            // Then validate the full CID format
+            $cid = $doc_type . $doc_number;
+            $cid_validation = MegaSoft_V2_Card_Validator::validate_cid( $cid );
+            if ( ! $cid_validation['valid'] ) {
+                $errors->add( 'doc_number', $cid_validation['message'] );
+            }
         }
 
         // If there are errors, display them
         if ( ! empty( $errors->get_error_codes() ) ) {
+            $this->logger->warn( 'Errores de validación encontrados', array(
+                'error_codes' => $errors->get_error_codes(),
+                'error_messages' => $errors->get_error_messages(),
+            ) );
+
             foreach ( $errors->get_error_messages() as $message ) {
                 wc_add_notice( $message, 'error' );
             }
             return false;
         }
 
+        $this->logger->info( 'validate_fields completado exitosamente' );
         return true;
     }
 
