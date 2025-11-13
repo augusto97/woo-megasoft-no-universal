@@ -46,6 +46,9 @@ class MegaSoft_V2_Admin {
         add_filter( 'manage_edit-shop_order_columns', array( $this, 'add_order_columns' ) );
         add_action( 'manage_shop_order_posts_custom_column', array( $this, 'render_order_column' ), 10, 2 );
 
+        // Add voucher download handler
+        add_action( 'admin_init', array( $this, 'handle_voucher_download' ) );
+
         // Add settings link to plugins page
         add_filter( 'plugin_action_links_' . plugin_basename( MEGASOFT_V2_PLUGIN_FILE ), array( $this, 'add_plugin_action_links' ) );
     }
@@ -1157,6 +1160,7 @@ class MegaSoft_V2_Admin {
         $authorization = $order->get_meta( '_megasoft_v2_authorization' );
         $card_last_four = $order->get_meta( '_megasoft_v2_card_last_four' );
         $card_type = $order->get_meta( '_megasoft_v2_card_type' );
+        $voucher_html = get_post_meta( $post->ID, '_megasoft_voucher_html', true );
 
         ?>
         <div class="megasoft-order-details">
@@ -1180,6 +1184,23 @@ class MegaSoft_V2_Admin {
                     <?php echo esc_html( ucfirst( $card_type ) ); ?> ****<?php echo esc_html( $card_last_four ); ?>
                 </p>
             <?php endif; ?>
+
+            <?php if ( $voucher_html ) : ?>
+                <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <strong><?php esc_html_e( 'Voucher:', 'woocommerce-megasoft-gateway-v2' ); ?></strong><br>
+                    <?php
+                    $download_url = add_query_arg( array(
+                        'action'   => 'megasoft_download_voucher',
+                        'order_id' => $post->ID,
+                        'nonce'    => wp_create_nonce( 'megasoft_voucher_' . $post->ID ),
+                    ), admin_url( 'admin.php' ) );
+                    ?>
+                    <a href="<?php echo esc_url( $download_url ); ?>" class="button button-secondary" style="margin-top: 5px;">
+                        <span class="dashicons dashicons-download" style="vertical-align: middle; margin-right: 5px;"></span>
+                        <?php esc_html_e( 'Descargar Voucher', 'woocommerce-megasoft-gateway-v2' ); ?>
+                    </a>
+                </p>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -1195,6 +1216,7 @@ class MegaSoft_V2_Admin {
 
             if ( $key === 'order_status' ) {
                 $new_columns['megasoft_control'] = __( 'Control Mega Soft', 'woocommerce-megasoft-gateway-v2' );
+                $new_columns['megasoft_actions'] = __( 'Voucher', 'woocommerce-megasoft-gateway-v2' );
             }
         }
 
@@ -1205,16 +1227,134 @@ class MegaSoft_V2_Admin {
      * Render custom order column
      */
     public function render_order_column( $column, $post_id ) {
-        if ( $column === 'megasoft_control' ) {
-            $order = wc_get_order( $post_id );
+        $order = wc_get_order( $post_id );
 
-            if ( $order && strpos( $order->get_payment_method(), 'megasoft' ) !== false ) {
-                $control = $order->get_meta( '_megasoft_v2_control' );
-                if ( $control ) {
-                    echo '<code>' . esc_html( $control ) . '</code>';
-                }
+        if ( ! $order || strpos( $order->get_payment_method(), 'megasoft' ) === false ) {
+            return;
+        }
+
+        if ( $column === 'megasoft_control' ) {
+            $control = $order->get_meta( '_megasoft_v2_control' );
+            if ( $control ) {
+                echo '<code>' . esc_html( $control ) . '</code>';
+            } else {
+                echo '—';
             }
         }
+
+        if ( $column === 'megasoft_actions' ) {
+            $voucher_html = get_post_meta( $post_id, '_megasoft_voucher_html', true );
+
+            if ( $voucher_html ) {
+                $download_url = add_query_arg( array(
+                    'action'   => 'megasoft_download_voucher',
+                    'order_id' => $post_id,
+                    'nonce'    => wp_create_nonce( 'megasoft_voucher_' . $post_id ),
+                ), admin_url( 'admin.php' ) );
+
+                echo '<a href="' . esc_url( $download_url ) . '" class="button button-small" title="' . esc_attr__( 'Descargar Voucher', 'woocommerce-megasoft-gateway-v2' ) . '">';
+                echo '<span class="dashicons dashicons-download" style="line-height: 1.4;"></span>';
+                echo '</a>';
+            } else {
+                echo '<span style="color: #999;">—</span>';
+            }
+        }
+    }
+
+    /**
+     * Handle voucher download request
+     */
+    public function handle_voucher_download() {
+        if ( ! isset( $_GET['action'] ) || $_GET['action'] !== 'megasoft_download_voucher' ) {
+            return;
+        }
+
+        if ( ! isset( $_GET['order_id'] ) || ! isset( $_GET['nonce'] ) ) {
+            wp_die( __( 'Parámetros inválidos', 'woocommerce-megasoft-gateway-v2' ) );
+        }
+
+        $order_id = intval( $_GET['order_id'] );
+        $nonce = sanitize_text_field( $_GET['nonce'] );
+
+        // Verify nonce
+        if ( ! wp_verify_nonce( $nonce, 'megasoft_voucher_' . $order_id ) ) {
+            wp_die( __( 'Verificación de seguridad fallida', 'woocommerce-megasoft-gateway-v2' ) );
+        }
+
+        // Verify user can manage orders
+        if ( ! current_user_can( 'edit_shop_orders' ) ) {
+            wp_die( __( 'No tienes permisos para realizar esta acción', 'woocommerce-megasoft-gateway-v2' ) );
+        }
+
+        // Get voucher HTML
+        $voucher_html = get_post_meta( $order_id, '_megasoft_voucher_html', true );
+
+        if ( ! $voucher_html ) {
+            wp_die( __( 'No se encontró el voucher para esta orden', 'woocommerce-megasoft-gateway-v2' ) );
+        }
+
+        // Get order
+        $order = wc_get_order( $order_id );
+        $control = $order->get_meta( '_megasoft_v2_control' );
+
+        // Create filename
+        $filename = 'voucher-megasoft-orden-' . $order_id . '-control-' . $control . '.html';
+
+        // Generate complete HTML document
+        $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Voucher - Orden #' . $order_id . '</title>
+    <style>
+        body {
+            font-family: "Courier New", monospace;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .voucher-container {
+            background: white;
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        @media print {
+            body {
+                background: white;
+                margin: 0;
+            }
+            .voucher-container {
+                box-shadow: none;
+                max-width: none;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="voucher-container">
+        ' . $voucher_html . '
+    </div>
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()">Imprimir</button>
+        <button onclick="window.close()">Cerrar</button>
+    </div>
+</body>
+</html>';
+
+        // Send headers
+        header( 'Content-Type: text/html; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+        header( 'Content-Length: ' . strlen( $html ) );
+        header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+
+        echo $html;
+        exit;
     }
 
     /**
