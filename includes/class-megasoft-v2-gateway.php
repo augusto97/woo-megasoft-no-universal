@@ -440,6 +440,16 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
     public function validate_fields() {
         $errors = new WP_Error();
 
+        // TEMPORARY FILE LOGGING FOR DEBUGGING
+        $log_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+        $log_msg = "\n[" . date('Y-m-d H:i:s') . "] validate_fields INICIADO\n";
+        $log_msg .= "POST data presente:\n";
+        $log_msg .= "  - card_number: " . (isset($_POST['megasoft_v2_card_number']) ? 'SI' : 'NO') . "\n";
+        $log_msg .= "  - card_name: " . (isset($_POST['megasoft_v2_card_name']) ? 'SI' : 'NO') . "\n";
+        $log_msg .= "  - doc_number: " . (isset($_POST['megasoft_v2_doc_number']) ? 'SI' : 'NO') . "\n";
+        $log_msg .= "  - nonce: " . (isset($_POST['megasoft_v2_nonce']) ? 'SI' : 'NO') . "\n";
+        @file_put_contents($log_file, $log_msg, FILE_APPEND);
+
         // Debug logging
         $this->logger->info( 'validate_fields iniciado', array(
             'post_data' => array(
@@ -452,6 +462,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         // Validate nonce
         if ( ! isset( $_POST['megasoft_v2_nonce'] ) || ! wp_verify_nonce( $_POST['megasoft_v2_nonce'], 'megasoft_v2_payment' ) ) {
             $errors->add( 'nonce', __( 'Error de seguridad. Por favor recarga la página.', 'woocommerce-megasoft-gateway-v2' ) );
+            @file_put_contents($log_file, "ERROR: Nonce inválido\n", FILE_APPEND);
         }
 
         // Card number
@@ -512,6 +523,14 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
 
         // If there are errors, display them
         if ( ! empty( $errors->get_error_codes() ) ) {
+            // File logging
+            $log_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+            $log_msg = "ERRORES DE VALIDACIÓN:\n";
+            foreach ( $errors->get_error_messages() as $msg ) {
+                $log_msg .= "  - " . $msg . "\n";
+            }
+            @file_put_contents($log_file, $log_msg, FILE_APPEND);
+
             $this->logger->warn( 'Errores de validación encontrados', array(
                 'error_codes' => $errors->get_error_codes(),
                 'error_messages' => $errors->get_error_messages(),
@@ -522,6 +541,10 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             }
             return false;
         }
+
+        // File logging
+        $log_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+        @file_put_contents($log_file, "validate_fields COMPLETADO EXITOSAMENTE\n\n", FILE_APPEND);
 
         $this->logger->info( 'validate_fields completado exitosamente' );
         return true;
@@ -535,6 +558,10 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
      */
     public function process_payment( $order_id ) {
         global $wpdb;
+
+        // TEMPORARY FILE LOGGING
+        $log_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+        @file_put_contents($log_file, "\n[" . date('Y-m-d H:i:s') . "] process_payment INICIADO - Order ID: $order_id\n", FILE_APPEND);
 
         $order = wc_get_order( $order_id );
 
@@ -670,6 +697,11 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             }
 
         } catch ( Exception $e ) {
+            // TEMPORARY FILE LOGGING
+            $log_file = MEGASOFT_V2_PLUGIN_PATH . 'debug-validation.log';
+            @file_put_contents($log_file, "ERROR EN process_payment: " . $e->getMessage() . "\n", FILE_APPEND);
+            @file_put_contents($log_file, "Stack trace: " . $e->getTraceAsString() . "\n\n", FILE_APPEND);
+
             $this->logger->error( 'Error al procesar pago', array(
                 'order_id' => $order_id,
                 'error'    => $e->getMessage(),
