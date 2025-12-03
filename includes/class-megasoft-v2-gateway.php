@@ -682,7 +682,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 );
 
             } else {
-                // Payment declined
+                // Payment declined - but still redirect to show voucher
                 $error_message = $status_response['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
 
                 $this->logger->warn( 'Pago rechazado', array(
@@ -695,9 +695,19 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 // Generate and save voucher for rejected payment
                 $this->generate_and_save_voucher( $order, $card_data, $status_response );
 
+                // Save transaction data even for rejected payments
+                $this->save_transaction_data( $order, $status_response, $card_data );
+
                 $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $response_code, $error_message ) );
 
-                throw new Exception( $error_message );
+                // Add error notice that will be displayed on thank you page
+                wc_add_notice( $error_message, 'error' );
+
+                // Return success with redirect to show voucher (do not throw exception)
+                return array(
+                    'result'   => 'success',
+                    'redirect' => $this->get_return_url( $order ),
+                );
             }
 
         } catch ( Exception $e ) {
