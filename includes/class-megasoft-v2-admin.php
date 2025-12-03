@@ -731,16 +731,55 @@ class MegaSoft_V2_Admin {
                 </thead>
                 <tbody>
                     <?php if ( ! empty( $logs ) ) : ?>
-                        <?php foreach ( $logs as $log ) : ?>
+                        <?php
+                        $row_id = 0;
+                        foreach ( $logs as $log ) :
+                            $row_id++;
+                            $context_preview = '';
+                            $context_full = '';
+                            $has_long_context = false;
+
+                            if ( ! empty( $log->context ) ) {
+                                $context_full = esc_html( $log->context );
+                                if ( strlen( $context_full ) > 200 ) {
+                                    $context_preview = substr( $context_full, 0, 200 ) . '...';
+                                    $has_long_context = true;
+                                } else {
+                                    $context_preview = $context_full;
+                                }
+                            }
+                        ?>
                             <tr>
                                 <td><?php echo $this->get_log_level_badge( $log->level ); ?></td>
                                 <td>
                                     <strong><?php echo esc_html( $log->message ); ?></strong>
                                     <?php if ( ! empty( $log->context ) ) : ?>
                                         <br>
-                                        <code style="display: block; margin-top: 5px; padding: 5px; background: #f5f5f5; font-size: 11px; overflow-x: auto;">
-                                            <?php echo esc_html( $log->context ); ?>
-                                        </code>
+                                        <div style="margin-top: 5px;">
+                                            <code id="context-preview-<?php echo $row_id; ?>" style="display: block; padding: 5px; background: #f5f5f5; font-size: 11px; overflow-x: auto; max-height: <?php echo $has_long_context ? '60px' : 'none'; ?>; overflow-y: <?php echo $has_long_context ? 'hidden' : 'visible'; ?>;">
+                                                <?php echo $context_preview; ?>
+                                            </code>
+                                            <?php if ( $has_long_context ) : ?>
+                                                <code id="context-full-<?php echo $row_id; ?>" style="display: none; padding: 5px; background: #f5f5f5; font-size: 11px; overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                                                    <?php echo $context_full; ?>
+                                                </code>
+                                                <button type="button" class="button button-small" onclick="
+                                                    var preview = document.getElementById('context-preview-<?php echo $row_id; ?>');
+                                                    var full = document.getElementById('context-full-<?php echo $row_id; ?>');
+                                                    if (full.style.display === 'none') {
+                                                        preview.style.display = 'none';
+                                                        full.style.display = 'block';
+                                                        this.textContent = '▲ Contraer';
+                                                    } else {
+                                                        preview.style.display = 'block';
+                                                        full.style.display = 'none';
+                                                        this.textContent = '▼ Ver completo';
+                                                    }
+                                                " style="margin-top: 3px; font-size: 11px;">
+                                                    ▼ Ver completo
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo esc_html( mysql2date( 'd/m/Y H:i:s', $log->created_at ) ); ?></td>
@@ -1611,13 +1650,18 @@ class MegaSoft_V2_Admin {
             wp_send_json_error( 'Unauthorized' );
         }
 
+        $days = isset( $_POST['days'] ) ? intval( $_POST['days'] ) : 7;
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'megasoft_v2_logs';
 
-        $deleted = $wpdb->query( "DELETE FROM $table_name WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+        $deleted = $wpdb->query( $wpdb->prepare(
+            "DELETE FROM $table_name WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+            $days
+        ) );
 
         wp_send_json_success( array(
-            'message' => sprintf( __( '%d logs eliminados', 'woocommerce-megasoft-gateway-v2' ), $deleted ),
+            'message' => sprintf( __( '%d logs eliminados (más antiguos de %d días)', 'woocommerce-megasoft-gateway-v2' ), $deleted, $days ),
         ) );
     }
 

@@ -175,7 +175,23 @@
          * Clear logs
          */
         clearLogs: function() {
-            if (!confirm(megasoftV2Admin.i18n.confirm_clear)) {
+            var days = prompt('¿Eliminar logs más antiguos de cuántos días?\n\nOpciones: 1, 7, 30, 60, 90 o 0 (todos)', '7');
+
+            if (days === null) {
+                return; // User cancelled
+            }
+
+            days = parseInt(days);
+            if (isNaN(days) || days < 0) {
+                alert('Por favor ingresa un número válido de días');
+                return;
+            }
+
+            var confirmMessage = days === 0
+                ? '¿Estás seguro de eliminar TODOS los logs?'
+                : '¿Eliminar logs más antiguos de ' + days + ' días?';
+
+            if (!confirm(confirmMessage)) {
                 return;
             }
 
@@ -187,7 +203,8 @@
                 type: 'POST',
                 data: {
                     action: 'megasoft_v2_clear_logs',
-                    nonce: megasoftV2Admin.nonce
+                    nonce: megasoftV2Admin.nonce,
+                    days: days === 0 ? 99999 : days  // Use very high number for "all"
                 },
                 success: function(response) {
                     if (response.success) {
@@ -201,7 +218,7 @@
                     alert(megasoftV2Admin.i18n.error);
                 },
                 complete: function() {
-                    $button.prop('disabled', false).text('Limpiar Logs');
+                    $button.prop('disabled', false).text('Limpiar Logs BD');
                 }
             });
         },
