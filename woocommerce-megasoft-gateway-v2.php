@@ -180,6 +180,7 @@ function megasoft_v2_add_gateway( $gateways ) {
     $gateways[] = 'WC_Gateway_MegaSoft_V2';
     $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_C2P';
     $gateways[] = 'WC_Gateway_MegaSoft_Pago_Movil_P2C';
+    $gateways[] = 'WC_Gateway_MegaSoft_Credito_Inmediato';
     return $gateways;
 }
 

@@ -418,6 +418,54 @@ class MegaSoft_V2_API {
     }
 
     /**
+     * Procesar Crédito Inmediato
+     * Endpoint: v2-procesar-compra-creditoinmediato
+     *
+     * @param array $data Datos del crédito inmediato:
+     *   - control: Número de control del pre-registro
+     *   - cid: Documento del cliente (tipo + número, ej: "V12345678")
+     *   - cuentaOrigen: Cuenta origen del cliente
+     *   - telefonoOrigen: Teléfono del cliente
+     *   - codigobancoOrigen: Código del banco origen
+     *   - cuentaDestino: Cuenta destino del comercio
+     *   - amount: Monto
+     *   - factura: Número de factura
+     * @return array|WP_Error
+     */
+    public function procesar_compra_creditoinmediato( $data ) {
+        $required_fields = array( 'control', 'cid', 'cuentaOrigen', 'telefonoOrigen',
+                                   'codigobancoOrigen', 'cuentaDestino', 'amount' );
+
+        foreach ( $required_fields as $field ) {
+            if ( empty( $data[ $field ] ) ) {
+                return new WP_Error( 'missing_field', sprintf( __( 'Campo requerido faltante: %s', 'woocommerce-megasoft-gateway-v2' ), $field ) );
+            }
+        }
+
+        $xml_data = array(
+            'cod_afiliacion'     => $this->cod_afiliacion,
+            'control'            => $data['control'],
+            'cid'                => $data['cid'],
+            'cuentaOrigen'       => $data['cuentaOrigen'],
+            'telefonoOrigen'     => $data['telefonoOrigen'],
+            'codigobancoOrigen'  => $data['codigobancoOrigen'],
+            'cuentaDestino'      => $data['cuentaDestino'],
+            'amount'             => $data['amount'],
+            'factura'            => isset( $data['factura'] ) ? $data['factura'] : '',
+        );
+
+        $xml_body = $this->build_xml( $xml_data );
+
+        $response = $this->do_post_request( 'v2-procesar-compra-creditoinmediato', $xml_body, 90 );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        return $this->normalize_transaction_response( $response );
+    }
+
+    /**
      * Procesar anulación de transacción (Tarjetas de Crédito)
      * Endpoint: v2-procesar-anulacion
      *
