@@ -211,27 +211,34 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
 
             if ( $status['success'] && $status['codigo'] === '00' ) {
+                // Payment approved
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Pago Móvil C2P procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
 
-                // Clear cart
+                // Clear cart only on success
                 WC()->cart->empty_cart();
+            } else {
+                // Payment rejected - mark as failed but still redirect to show voucher
+                $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+                $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
 
-                return array(
-                    'result'   => 'success',
-                    'redirect' => $this->get_return_url( $order ),
-                );
+                // Add error notice that will be displayed on thank you page
+                wc_add_notice( $error_message, 'error' );
             }
 
-            // Payment rejected - voucher already generated above
-            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
-            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
-
-            throw new Exception( $error_message );
+            // Always redirect to thank you page to show voucher
+            return array(
+                'result'   => 'success',
+                'redirect' => $this->get_return_url( $order ),
+            );
 
         } catch ( Exception $e ) {
+            // Only catch exceptions from API errors, not payment rejection
             wc_add_notice( $e->getMessage(), 'error' );
-            return array( 'result' => 'failure' );
+            return array(
+                'result'   => 'failure',
+                'redirect' => '',
+            );
         }
     }
 
@@ -514,27 +521,34 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
 
             if ( $status['success'] && $status['codigo'] === '00' ) {
+                // Payment approved
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Pago Móvil P2C procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
 
-                // Clear cart
+                // Clear cart only on success
                 WC()->cart->empty_cart();
+            } else {
+                // Payment rejected - mark as failed but still redirect to show voucher
+                $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+                $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
 
-                return array(
-                    'result'   => 'success',
-                    'redirect' => $this->get_return_url( $order ),
-                );
+                // Add error notice that will be displayed on thank you page
+                wc_add_notice( $error_message, 'error' );
             }
 
-            // Payment rejected - voucher already generated above
-            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
-            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
-
-            throw new Exception( $error_message );
+            // Always redirect to thank you page to show voucher
+            return array(
+                'result'   => 'success',
+                'redirect' => $this->get_return_url( $order ),
+            );
 
         } catch ( Exception $e ) {
+            // Only catch exceptions from API errors, not payment rejection
             wc_add_notice( $e->getMessage(), 'error' );
-            return array( 'result' => 'failure' );
+            return array(
+                'result'   => 'failure',
+                'redirect' => '',
+            );
         }
     }
 
@@ -803,27 +817,34 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
 
             if ( $status['success'] && $status['codigo'] === '00' ) {
+                // Payment approved
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Crédito Inmediato procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
 
-                // Clear cart
+                // Clear cart only on success
                 WC()->cart->empty_cart();
+            } else {
+                // Payment rejected - mark as failed but still redirect to show voucher
+                $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+                $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
 
-                return array(
-                    'result'   => 'success',
-                    'redirect' => $this->get_return_url( $order ),
-                );
+                // Add error notice that will be displayed on thank you page
+                wc_add_notice( $error_message, 'error' );
             }
 
-            // Payment rejected - voucher already generated above
-            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
-            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
-
-            throw new Exception( $error_message );
+            // Always redirect to thank you page to show voucher
+            return array(
+                'result'   => 'success',
+                'redirect' => $this->get_return_url( $order ),
+            );
 
         } catch ( Exception $e ) {
+            // Only catch exceptions from API errors, not payment rejection
             wc_add_notice( $e->getMessage(), 'error' );
-            return array( 'result' => 'failure' );
+            return array(
+                'result'   => 'failure',
+                'redirect' => '',
+            );
         }
     }
 
