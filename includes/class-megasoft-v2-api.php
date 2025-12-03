@@ -586,13 +586,16 @@ class MegaSoft_V2_API {
      */
     private function normalize_transaction_response( $response ) {
         $codigo = isset( $response['codigo'] ) ? $response['codigo'] : '99';
+        $descripcion = isset( $response['descripcion'] ) ? $response['descripcion'] : '';
         $approved = ( $codigo === '00' );
 
         return array(
             'success'      => $approved,
             'approved'     => $approved,
             'codigo'       => $codigo,
-            'descripcion'  => isset( $response['descripcion'] ) ? $response['descripcion'] : '',
+            'descripcion'  => $descripcion,
+            'message'      => $descripcion,  // Agregar para compatibilidad
+            'mensaje'      => $descripcion,  // Agregar para compatibilidad
             'control'      => isset( $response['control'] ) ? $response['control'] : '',
             'factura'      => isset( $response['factura'] ) ? $response['factura'] : '',
             'authid'       => isset( $response['authid'] ) ? $response['authid'] : '',
