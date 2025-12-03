@@ -621,18 +621,17 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
             // Call API method (no acepta segundo parámetro)
             $payment_response = $this->api->procesar_compra_credito( $payment_data );
 
-            // DEBUG: Log the response
-
             // Step 3: Check response
             if ( ! isset( $payment_response['success'] ) ) {
                 throw new Exception( __( 'Respuesta de API inválida', 'woocommerce-megasoft-gateway-v2' ) );
             }
 
-            if ( ! $payment_response['success'] ) {
-                throw new Exception( $payment_response['message'] ?? __( 'Error al procesar el pago', 'woocommerce-megasoft-gateway-v2' ) );
-            }
+            // NOTE: Do NOT throw exception if payment_response['success'] is false
+            // This happens when card is blocked, insufficient funds, etc.
+            // We need to continue to query_status to get the voucher data
+            // and then redirect to thank you page to show the voucher
 
-            // Step 4: Query status to confirm
+            // Step 4: Query status to confirm and get full details
             $this->logger->debug( 'Consultando estado de transacción', array(
                 'order_id' => $order_id,
                 'control'  => $control_number,
@@ -640,11 +639,12 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
 
             $status_response = $this->api->query_status( $control_number, $card_type );
 
-            if ( ! $status_response['success'] ) {
-                throw new Exception( $status_response['message'] ?? __( 'Error al consultar estado', 'woocommerce-megasoft-gateway-v2' ) );
-            }
+            // NOTE: Do NOT throw exception if status_response['success'] is false
+            // success=false just means the payment was not approved (blocked card, insufficient funds, etc.)
+            // but we still got a valid response with voucher data that we need to show
+            // The actual approval status is determined by checking the 'codigo' field
 
-            // Check if approved
+            // Check if approved by codigo (00 = approved, anything else = rejected)
             $response_code = $status_response['codigo'] ?? '';
 
             if ( $response_code === '00' ) {
