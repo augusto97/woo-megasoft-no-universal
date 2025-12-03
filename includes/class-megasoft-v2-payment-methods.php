@@ -56,6 +56,7 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
         $this->logger = new MegaSoft_V2_Logger( true, 'info' );
 
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+        add_action( 'woocommerce_thankyou_' . $this->id, array( $this, 'thankyou_page' ) );
     }
 
     public function init_form_fields() {
@@ -192,9 +193,29 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
             // Query status
             $status = $this->api->query_status( $control, 'C2P' );
 
+            // Prepare transaction data for voucher
+            $transaction_data = array(
+                'type'          => 'Pago Móvil C2P',
+                'amount'        => $order->get_total(),
+                'currency'      => $order->get_currency(),
+                'phone'         => $phone,
+                'bank'          => $bank,
+                'codigo_c2p'    => $codigo_c2p,
+                'merchant_info' => array(
+                    'name'    => get_bloginfo( 'name' ),
+                    'address' => get_option( 'woocommerce_store_address' ),
+                ),
+            );
+
+            // Generate and save voucher regardless of status
+            $this->generate_and_save_voucher( $order, $transaction_data, $status );
+
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Pago Móvil C2P procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
+
+                // Clear cart
+                WC()->cart->empty_cart();
 
                 return array(
                     'result'   => 'success',
@@ -202,12 +223,52 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
                 );
             }
 
-            throw new Exception( $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' ) );
+            // Payment rejected - voucher already generated above
+            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
+
+            throw new Exception( $error_message );
 
         } catch ( Exception $e ) {
             wc_add_notice( $e->getMessage(), 'error' );
             return array( 'result' => 'failure' );
         }
+    }
+
+    /**
+     * Generate and save voucher for transaction
+     */
+    private function generate_and_save_voucher( $order, $transaction_data, $response ) {
+        try {
+            $voucher_html = MegaSoft_V2_Voucher::generate( $transaction_data, $response );
+            MegaSoft_V2_Voucher::save_to_order( $order->get_id(), $voucher_html );
+
+            $this->logger->debug( 'Voucher C2P generado y guardado', array(
+                'order_id' => $order->get_id(),
+            ) );
+        } catch ( Exception $e ) {
+            $this->logger->error( 'Error al generar voucher C2P', array(
+                'order_id' => $order->get_id(),
+                'error'    => $e->getMessage(),
+            ) );
+        }
+    }
+
+    /**
+     * Display thank you page with voucher
+     */
+    public function thankyou_page( $order_id ) {
+        if ( ! $order_id ) {
+            return;
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+
+        // Display voucher using the voucher class
+        MegaSoft_V2_Voucher::display_in_order_details( $order );
     }
 
     private function get_venezuelan_banks() {
@@ -279,6 +340,7 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
         $this->logger = new MegaSoft_V2_Logger( true, 'info' );
 
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+        add_action( 'woocommerce_thankyou_' . $this->id, array( $this, 'thankyou_page' ) );
     }
 
     public function init_form_fields() {
@@ -433,9 +495,30 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             // Query status
             $status = $this->api->query_status( $control, 'P2C' );
 
+            // Prepare transaction data for voucher
+            $transaction_data = array(
+                'type'           => 'Pago Móvil P2C',
+                'amount'         => $order->get_total(),
+                'currency'       => $order->get_currency(),
+                'customer_phone' => $customer_phone,
+                'customer_bank'  => $customer_bank,
+                'merchant_phone' => $merchant_phone,
+                'merchant_bank'  => $merchant_bank,
+                'merchant_info'  => array(
+                    'name'    => get_bloginfo( 'name' ),
+                    'address' => get_option( 'woocommerce_store_address' ),
+                ),
+            );
+
+            // Generate and save voucher regardless of status
+            $this->generate_and_save_voucher( $order, $transaction_data, $status );
+
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Pago Móvil P2C procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
+
+                // Clear cart
+                WC()->cart->empty_cart();
 
                 return array(
                     'result'   => 'success',
@@ -443,12 +526,52 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
                 );
             }
 
-            throw new Exception( $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' ) );
+            // Payment rejected - voucher already generated above
+            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
+
+            throw new Exception( $error_message );
 
         } catch ( Exception $e ) {
             wc_add_notice( $e->getMessage(), 'error' );
             return array( 'result' => 'failure' );
         }
+    }
+
+    /**
+     * Generate and save voucher for transaction
+     */
+    private function generate_and_save_voucher( $order, $transaction_data, $response ) {
+        try {
+            $voucher_html = MegaSoft_V2_Voucher::generate( $transaction_data, $response );
+            MegaSoft_V2_Voucher::save_to_order( $order->get_id(), $voucher_html );
+
+            $this->logger->debug( 'Voucher P2C generado y guardado', array(
+                'order_id' => $order->get_id(),
+            ) );
+        } catch ( Exception $e ) {
+            $this->logger->error( 'Error al generar voucher P2C', array(
+                'order_id' => $order->get_id(),
+                'error'    => $e->getMessage(),
+            ) );
+        }
+    }
+
+    /**
+     * Display thank you page with voucher
+     */
+    public function thankyou_page( $order_id ) {
+        if ( ! $order_id ) {
+            return;
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+
+        // Display voucher using the voucher class
+        MegaSoft_V2_Voucher::display_in_order_details( $order );
     }
 
     private function get_venezuelan_banks() {
@@ -520,6 +643,7 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
         $this->logger = new MegaSoft_V2_Logger( true, 'info' );
 
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+        add_action( 'woocommerce_thankyou_' . $this->id, array( $this, 'thankyou_page' ) );
     }
 
     public function init_form_fields() {
@@ -661,9 +785,29 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
             // Query status
             $status = $this->api->query_status( $control, 'CREDITOINMEDIATO' );
 
+            // Prepare transaction data for voucher
+            $transaction_data = array(
+                'type'           => 'Crédito Inmediato',
+                'amount'         => $order->get_total(),
+                'currency'       => $order->get_currency(),
+                'account'        => $account,
+                'phone'          => $phone,
+                'bank'           => $bank,
+                'merchant_info'  => array(
+                    'name'    => get_bloginfo( 'name' ),
+                    'address' => get_option( 'woocommerce_store_address' ),
+                ),
+            );
+
+            // Generate and save voucher regardless of status
+            $this->generate_and_save_voucher( $order, $transaction_data, $status );
+
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 $order->payment_complete( $control );
                 $order->add_order_note( sprintf( __( 'Crédito Inmediato procesado. Control: %s', 'woocommerce-megasoft-gateway-v2' ), $control ) );
+
+                // Clear cart
+                WC()->cart->empty_cart();
 
                 return array(
                     'result'   => 'success',
@@ -671,12 +815,52 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
                 );
             }
 
-            throw new Exception( $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' ) );
+            // Payment rejected - voucher already generated above
+            $error_message = $status['mensaje'] ?? __( 'Pago rechazado', 'woocommerce-megasoft-gateway-v2' );
+            $order->update_status( 'failed', sprintf( __( 'Pago rechazado. Código: %s - %s', 'woocommerce-megasoft-gateway-v2' ), $status['codigo'], $error_message ) );
+
+            throw new Exception( $error_message );
 
         } catch ( Exception $e ) {
             wc_add_notice( $e->getMessage(), 'error' );
             return array( 'result' => 'failure' );
         }
+    }
+
+    /**
+     * Generate and save voucher for transaction
+     */
+    private function generate_and_save_voucher( $order, $transaction_data, $response ) {
+        try {
+            $voucher_html = MegaSoft_V2_Voucher::generate( $transaction_data, $response );
+            MegaSoft_V2_Voucher::save_to_order( $order->get_id(), $voucher_html );
+
+            $this->logger->debug( 'Voucher Crédito Inmediato generado y guardado', array(
+                'order_id' => $order->get_id(),
+            ) );
+        } catch ( Exception $e ) {
+            $this->logger->error( 'Error al generar voucher Crédito Inmediato', array(
+                'order_id' => $order->get_id(),
+                'error'    => $e->getMessage(),
+            ) );
+        }
+    }
+
+    /**
+     * Display thank you page with voucher
+     */
+    public function thankyou_page( $order_id ) {
+        if ( ! $order_id ) {
+            return;
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+
+        // Display voucher using the voucher class
+        MegaSoft_V2_Voucher::display_in_order_details( $order );
     }
 
     private function get_venezuelan_banks() {
