@@ -719,8 +719,9 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
             </p>
 
             <p class="form-row form-row-wide">
-                <label for="ci_account"><?php esc_html_e( 'Número de Cuenta Origen', 'woocommerce-megasoft-gateway-v2' ); ?> <span class="required">*</span></label>
-                <input type="text" id="ci_account" name="ci_account" placeholder="01051234567890123456" maxlength="20" required />
+                <label for="ci_account"><?php esc_html_e( 'Últimos 6 Dígitos de la Cuenta Origen', 'woocommerce-megasoft-gateway-v2' ); ?> <span class="required">*</span></label>
+                <input type="text" id="ci_account" name="ci_account" placeholder="123456" maxlength="6" minlength="6" pattern="[0-9]{6}" required />
+                <small><?php esc_html_e( 'Solo los últimos 6 dígitos de tu cuenta bancaria', 'woocommerce-megasoft-gateway-v2' ); ?></small>
             </p>
 
             <p class="form-row form-row-wide">
