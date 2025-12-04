@@ -214,7 +214,9 @@ class MegaSoft_V2_API {
                 // Manejo de arrays anidados si es necesario
                 continue;
             }
-            $value = htmlspecialchars( $value, ENT_XML1, 'UTF-8' );
+            // Cast to string for PHP 8+ compatibility
+            $value = (string) $value;
+            $value = htmlspecialchars( $value, ENT_XML1 | ENT_COMPAT, 'UTF-8' );
             $xml .= "    <{$key}>{$value}</{$key}>\n";
         }
 
