@@ -1655,13 +1655,21 @@ class MegaSoft_V2_Admin {
         global $wpdb;
         $table_name = $wpdb->prefix . 'megasoft_v2_logs';
 
-        $deleted = $wpdb->query( $wpdb->prepare(
-            "DELETE FROM $table_name WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
-            $days
-        ) );
+        // Handle "delete all" case
+        if ( $days === 0 ) {
+            $deleted = $wpdb->query( "DELETE FROM $table_name" );
+            $message = sprintf( __( 'Todos los logs eliminados (%d registros)', 'woocommerce-megasoft-gateway-v2' ), $deleted );
+        } else {
+            // Delete logs older than specified days (keep recent logs)
+            $deleted = $wpdb->query( $wpdb->prepare(
+                "DELETE FROM $table_name WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+                $days
+            ) );
+            $message = sprintf( __( '%d logs eliminados (más antiguos de %d días)', 'woocommerce-megasoft-gateway-v2' ), $deleted, $days );
+        }
 
         wp_send_json_success( array(
-            'message' => sprintf( __( '%d logs eliminados (más antiguos de %d días)', 'woocommerce-megasoft-gateway-v2' ), $deleted, $days ),
+            'message' => $message,
         ) );
     }
 

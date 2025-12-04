@@ -579,6 +579,15 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             // Generate and save voucher regardless of status
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
 
+            // Save transaction to database
+            $payment_data = array(
+                'customer_phone' => $customer_phone,
+                'customer_bank'  => $customer_bank,
+                'merchant_phone' => $merchant_phone,
+                'merchant_bank'  => $merchant_bank,
+            );
+            MegaSoft_V2_Transaction_Saver::save_alternative_payment( $order, $status, 'P2C', $payment_data );
+
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 // Payment approved
                 $order->payment_complete( $control );

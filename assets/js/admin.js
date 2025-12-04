@@ -204,7 +204,7 @@
                 data: {
                     action: 'megasoft_v2_clear_logs',
                     nonce: megasoftV2Admin.nonce,
-                    days: days === 0 ? 99999 : days  // Use very high number for "all"
+                    days: days  // 0 means delete all, handled correctly by server
                 },
                 success: function(response) {
                     if (response.success) {
