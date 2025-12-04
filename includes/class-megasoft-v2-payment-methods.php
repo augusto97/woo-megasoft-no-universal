@@ -529,6 +529,11 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
                 'factura'            => $order->get_order_number(),
             );
 
+            // Log datos que se enviarán a la API
+            $this->logger->info( 'P2C datos que se envían a procesar_pago_movil_p2c', array(
+                'payment_data' => $payment_data,
+            ) );
+
             $response = $this->api->procesar_pago_movil_p2c( $payment_data );
 
             if ( is_wp_error( $response ) ) {
