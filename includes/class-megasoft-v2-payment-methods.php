@@ -165,6 +165,10 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
             // Pre-registro
             $preregistro = $this->api->preregistro();
 
+            if ( is_wp_error( $preregistro ) ) {
+                throw new Exception( $preregistro->get_error_message() );
+            }
+
             if ( ! $preregistro['success'] ) {
                 throw new Exception( $preregistro['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
             }
@@ -186,12 +190,20 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_pago_movil_c2p( $payment_data );
 
+            if ( is_wp_error( $response ) ) {
+                throw new Exception( $response->get_error_message() );
+            }
+
             // NOTE: Do NOT throw exception if response['success'] is false
             // success=false just means payment was rejected (blocked, insufficient funds, etc.)
             // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'C2P' );
+
+            if ( is_wp_error( $status ) ) {
+                throw new Exception( $status->get_error_message() );
+            }
 
             // Prepare transaction data for voucher
             $transaction_data = array(
@@ -470,6 +482,10 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             // Pre-registro
             $preregistro = $this->api->preregistro();
 
+            if ( is_wp_error( $preregistro ) ) {
+                throw new Exception( $preregistro->get_error_message() );
+            }
+
             if ( ! $preregistro['success'] ) {
                 throw new Exception( $preregistro['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
             }
@@ -495,12 +511,20 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_pago_movil_p2c( $payment_data );
 
+            if ( is_wp_error( $response ) ) {
+                throw new Exception( $response->get_error_message() );
+            }
+
             // NOTE: Do NOT throw exception if response['success'] is false
             // success=false just means payment was rejected
             // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'P2C' );
+
+            if ( is_wp_error( $status ) ) {
+                throw new Exception( $status->get_error_message() );
+            }
 
             // Prepare transaction data for voucher
             $transaction_data = array(
@@ -767,6 +791,10 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
             // Pre-registro
             $preregistro = $this->api->preregistro();
 
+            if ( is_wp_error( $preregistro ) ) {
+                throw new Exception( $preregistro->get_error_message() );
+            }
+
             if ( ! $preregistro['success'] ) {
                 throw new Exception( $preregistro['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
             }
@@ -793,12 +821,20 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_compra_creditoinmediato( $payment_data );
 
+            if ( is_wp_error( $response ) ) {
+                throw new Exception( $response->get_error_message() );
+            }
+
             // NOTE: Do NOT throw exception if response['success'] is false
             // success=false just means payment was rejected
             // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'CREDITOINMEDIATO' );
+
+            if ( is_wp_error( $status ) ) {
+                throw new Exception( $status->get_error_message() );
+            }
 
             // Prepare transaction data for voucher
             $transaction_data = array(
