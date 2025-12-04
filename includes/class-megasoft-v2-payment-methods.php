@@ -459,11 +459,19 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
         $order = wc_get_order( $order_id );
 
         try {
+            $this->logger->info( 'P2C process_payment iniciado', array( 'order_id' => $order_id ) );
+
             // Get form data
             $customer_phone = sanitize_text_field( $_POST['p2c_phone'] ?? '' );
             $customer_bank  = sanitize_text_field( $_POST['p2c_bank'] ?? '' );
             $doc_type       = sanitize_text_field( $_POST['p2c_doc_type'] ?? 'V' );
             $doc_number     = sanitize_text_field( $_POST['p2c_doc_number'] ?? '' );
+
+            $this->logger->info( 'P2C datos del formulario obtenidos', array(
+                'customer_phone' => $customer_phone,
+                'customer_bank' => $customer_bank,
+                'doc_type' => $doc_type,
+            ) );
 
             // Validate
             if ( empty( $customer_phone ) || empty( $customer_bank ) || empty( $doc_number ) ) {
@@ -475,11 +483,18 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             $merchant_bank  = $this->get_option( 'merchant_bank' );
             $payment_type   = $this->get_option( 'payment_type', '10' );
 
+            $this->logger->info( 'P2C configuración del comercio', array(
+                'merchant_phone' => $merchant_phone,
+                'merchant_bank' => $merchant_bank,
+                'payment_type' => $payment_type,
+            ) );
+
             if ( empty( $merchant_phone ) || empty( $merchant_bank ) ) {
                 throw new Exception( __( 'Configuración del comercio incompleta. Contacte al administrador.', 'woocommerce-megasoft-gateway-v2' ) );
             }
 
             // Pre-registro
+            $this->logger->info( 'P2C iniciando preregistro' );
             $preregistro = $this->api->preregistro();
 
             if ( is_wp_error( $preregistro ) ) {
@@ -568,7 +583,24 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
 
         } catch ( Exception $e ) {
             // Only catch exceptions from API errors, not payment rejection
+            $this->logger->error( 'P2C Exception capturada', array(
+                'order_id' => $order_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ) );
             wc_add_notice( $e->getMessage(), 'error' );
+            return array(
+                'result'   => 'failure',
+                'redirect' => '',
+            );
+        } catch ( Error $e ) {
+            // Catch PHP 7+ errors
+            $this->logger->error( 'P2C Error fatal capturado', array(
+                'order_id' => $order_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ) );
+            wc_add_notice( __( 'Error interno del servidor. Por favor contacte al administrador.', 'woocommerce-megasoft-gateway-v2' ), 'error' );
             return array(
                 'result'   => 'failure',
                 'redirect' => '',
