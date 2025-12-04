@@ -222,6 +222,14 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
             // Generate and save voucher regardless of status
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
 
+            // Save transaction to database
+            $payment_data = array(
+                'phone'      => $phone,
+                'bank'       => $bank,
+                'codigo_c2p' => $codigo_c2p,
+            );
+            MegaSoft_V2_Transaction_Saver::save_alternative_payment( $order, $status, 'C2P', $payment_data );
+
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 // Payment approved
                 $order->payment_complete( $control );
@@ -913,6 +921,14 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
 
             // Generate and save voucher regardless of status
             $this->generate_and_save_voucher( $order, $transaction_data, $status );
+
+            // Save transaction to database
+            $payment_data = array(
+                'account' => $account,
+                'phone'   => $phone,
+                'bank'    => $bank,
+            );
+            MegaSoft_V2_Transaction_Saver::save_alternative_payment( $order, $status, 'CREDITOINMEDIATO', $payment_data );
 
             if ( $status['success'] && $status['codigo'] === '00' ) {
                 // Payment approved
