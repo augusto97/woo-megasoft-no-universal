@@ -186,9 +186,9 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_pago_movil_c2p( $payment_data );
 
-            if ( ! $response['success'] ) {
-                throw new Exception( $response['message'] ?? __( 'Error al procesar pago', 'woocommerce-megasoft-gateway-v2' ) );
-            }
+            // NOTE: Do NOT throw exception if response['success'] is false
+            // success=false just means payment was rejected (blocked, insufficient funds, etc.)
+            // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'C2P' );
@@ -495,9 +495,9 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_pago_movil_p2c( $payment_data );
 
-            if ( ! $response['success'] ) {
-                throw new Exception( $response['message'] ?? __( 'Error al procesar pago', 'woocommerce-megasoft-gateway-v2' ) );
-            }
+            // NOTE: Do NOT throw exception if response['success'] is false
+            // success=false just means payment was rejected
+            // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'P2C' );
@@ -793,9 +793,9 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
 
             $response = $this->api->procesar_compra_creditoinmediato( $payment_data );
 
-            if ( ! $response['success'] ) {
-                throw new Exception( $response['message'] ?? __( 'Error al procesar pago', 'woocommerce-megasoft-gateway-v2' ) );
-            }
+            // NOTE: Do NOT throw exception if response['success'] is false
+            // success=false just means payment was rejected
+            // We need to continue to query_status to get voucher data and show it
 
             // Query status
             $status = $this->api->query_status( $control, 'CREDITOINMEDIATO' );
