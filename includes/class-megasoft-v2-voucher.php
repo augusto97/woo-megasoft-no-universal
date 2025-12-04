@@ -205,6 +205,22 @@ class MegaSoft_V2_Voucher {
                 <div class="voucher-content">
                     <?php foreach ( $lines as $line ) : ?>
                         <?php
+                        // Ensure line is a string
+                        if ( is_array( $line ) ) {
+                            error_log( 'MegaSoft Voucher: Array encontrado en línea: ' . print_r( $line, true ) );
+                            // Try to extract text from array
+                            if ( isset( $line['texto'] ) ) {
+                                $line = $line['texto'];
+                            } elseif ( isset( $line[0] ) ) {
+                                $line = $line[0];
+                            } else {
+                                $line = implode( ' ', array_filter( $line, 'is_scalar' ) );
+                            }
+                        }
+
+                        // Make sure it's a string now
+                        $line = (string) $line;
+
                         // Check for special formatting tags
                         $line = str_replace( '<UT>', '<span class="duplicate-mark">', $line );
                         $line = str_replace( '</UT>', '</span>', $line );
