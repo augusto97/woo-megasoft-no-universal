@@ -412,6 +412,13 @@ add_action( 'wp_ajax_megasoft_v2_dismiss_pci_notice', 'megasoft_v2_ajax_dismiss_
 register_activation_hook( __FILE__, 'megasoft_v2_activate' );
 register_deactivation_hook( __FILE__, 'megasoft_v2_deactivate' );
 
+// Declarar compatibilidad con HPOS (High-Performance Order Storage)
+add_action( 'before_woocommerce_init', function() {
+    if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    }
+} );
+
 // Inicializar plugin
 add_action( 'plugins_loaded', 'megasoft_v2_init', 11 );
 
