@@ -104,7 +104,7 @@ class MegaSoft_V2_Voucher {
         $lines[] = '_';
         $lines[] = '<UT>__DUPLICADO</UT>';
         $lines[] = 'MEGA SOFT - PAYMENT GATEWAY';
-        $lines[] = isset( $response_data['authname'] ) ? $response_data['authname'] : 'TRANSACCIÓN';
+        $lines[] = self::extract_value( $response_data, 'authname', 'TRANSACCIÓN' );
         $lines[] = strtoupper( $transaction_data['type'] ?? 'VENTA' );
         $lines[] = '_';
 
@@ -116,15 +116,15 @@ class MegaSoft_V2_Voucher {
 
         // RIF and affiliation
         if ( isset( $response_data['afiliacion'] ) ) {
-            $lines[] = 'AFIL:' . $response_data['afiliacion'];
+            $lines[] = 'AFIL:' . self::extract_value( $response_data, 'afiliacion' );
         }
 
         // Terminal info
         if ( isset( $response_data['terminal'] ) ) {
-            $lines[] = 'TER:' . $response_data['terminal'];
+            $lines[] = 'TER:' . self::extract_value( $response_data, 'terminal' );
         }
         if ( isset( $response_data['lote'] ) ) {
-            $lines[] = 'LOTE:' . $response_data['lote'];
+            $lines[] = 'LOTE:' . self::extract_value( $response_data, 'lote' );
         }
 
         $lines[] = '_';
@@ -134,25 +134,25 @@ class MegaSoft_V2_Voucher {
 
         // Card or payment method info
         if ( isset( $response_data['tarjeta'] ) ) {
-            $lines[] = 'TARJETA:' . $response_data['tarjeta'];
+            $lines[] = 'TARJETA:' . self::extract_value( $response_data, 'tarjeta' );
         } elseif ( isset( $transaction_data['card_last_four'] ) ) {
             $lines[] = 'TARJETA:' . str_repeat( '*', 12 ) . $transaction_data['card_last_four'];
         }
 
         // Reference and approval
         if ( isset( $response_data['referencia'] ) ) {
-            $lines[] = 'REFERENCIA:' . $response_data['referencia'];
+            $lines[] = 'REFERENCIA:' . self::extract_value( $response_data, 'referencia' );
         }
         if ( isset( $response_data['authid'] ) && ! empty( $response_data['authid'] ) ) {
-            $lines[] = 'APROBACION:' . $response_data['authid'];
+            $lines[] = 'APROBACION:' . self::extract_value( $response_data, 'authid' );
         }
 
         // Sequence and control
         if ( isset( $response_data['seqnum'] ) ) {
-            $lines[] = 'SECUENCIA:' . $response_data['seqnum'];
+            $lines[] = 'SECUENCIA:' . self::extract_value( $response_data, 'seqnum' );
         }
         if ( isset( $response_data['control'] ) ) {
-            $lines[] = 'CONTROL:' . $response_data['control'];
+            $lines[] = 'CONTROL:' . self::extract_value( $response_data, 'control' );
         }
 
         $lines[] = '_';
@@ -169,13 +169,53 @@ class MegaSoft_V2_Voucher {
         $lines[] = 'ESTADO: ' . $status_text;
 
         if ( ! $is_approved && isset( $response_data['descripcion'] ) ) {
-            $lines[] = 'MOTIVO: ' . strtoupper( $response_data['descripcion'] );
+            $lines[] = 'MOTIVO: ' . strtoupper( self::extract_value( $response_data, 'descripcion' ) );
         }
 
         $lines[] = '_';
         $lines[] = '_';
 
         return $lines;
+    }
+
+    /**
+     * Extract value from array, handling both strings and arrays
+     *
+     * @param array $data Data array
+     * @param string $key Key to extract
+     * @param string $default Default value if not found
+     * @return string Extracted value as string
+     */
+    private static function extract_value( $data, $key, $default = '' ) {
+        if ( ! isset( $data[ $key ] ) ) {
+            return $default;
+        }
+
+        $value = $data[ $key ];
+
+        // If it's already a string, return it
+        if ( is_string( $value ) ) {
+            return $value;
+        }
+
+        // If it's an array, try to extract meaningful value
+        if ( is_array( $value ) ) {
+            // Try common text fields
+            if ( isset( $value['texto'] ) && is_string( $value['texto'] ) ) {
+                return $value['texto'];
+            }
+            if ( isset( $value['value'] ) && is_string( $value['value'] ) ) {
+                return $value['value'];
+            }
+            if ( isset( $value[0] ) && is_string( $value[0] ) ) {
+                return $value[0];
+            }
+            // Join array values as last resort
+            return implode( ' ', array_filter( $value, 'is_scalar' ) );
+        }
+
+        // Convert to string for other types
+        return (string) $value;
     }
 
     /**
