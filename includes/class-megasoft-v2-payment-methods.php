@@ -501,6 +501,11 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
                 throw new Exception( $preregistro->get_error_message() );
             }
 
+            // Log preregistro response
+            $this->logger->info( 'P2C respuesta de preregistro', array(
+                'preregistro' => $preregistro,
+            ) );
+
             if ( ! $preregistro['success'] ) {
                 throw new Exception( $preregistro['message'] ?? __( 'Error en pre-registro', 'woocommerce-megasoft-gateway-v2' ) );
             }
@@ -530,6 +535,11 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
                 throw new Exception( $response->get_error_message() );
             }
 
+            // Log payment response for debugging
+            $this->logger->info( 'P2C respuesta de procesar_pago_movil_p2c', array(
+                'response' => $response,
+            ) );
+
             // NOTE: Do NOT throw exception if response['success'] is false
             // success=false just means payment was rejected
             // We need to continue to query_status to get voucher data and show it
@@ -540,6 +550,11 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
             if ( is_wp_error( $status ) ) {
                 throw new Exception( $status->get_error_message() );
             }
+
+            // Log API response for debugging
+            $this->logger->info( 'P2C respuesta de query_status', array(
+                'status' => $status,
+            ) );
 
             // Prepare transaction data for voucher
             $transaction_data = array(
