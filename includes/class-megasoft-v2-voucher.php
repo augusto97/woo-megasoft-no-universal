@@ -28,7 +28,10 @@ class MegaSoft_V2_Voucher {
 
         // Parse voucher from API response if available
         if ( isset( $response_data['voucher'] ) && ! empty( $response_data['voucher'] ) ) {
+            // Log voucher structure for debugging
+            error_log( 'MegaSoft Voucher Data: ' . print_r( $response_data['voucher'], true ) );
             $voucher_lines = self::parse_api_voucher( $response_data['voucher'] );
+            error_log( 'MegaSoft Parsed Lines: ' . print_r( $voucher_lines, true ) );
         }
 
         // If no voucher from API, generate default voucher
@@ -57,6 +60,17 @@ class MegaSoft_V2_Voucher {
                 foreach ( $lineas as $linea ) {
                     if ( is_string( $linea ) ) {
                         $lines[] = $linea;
+                    } elseif ( is_array( $linea ) ) {
+                        // If linea is an array, try to extract the text value
+                        if ( isset( $linea['texto'] ) && is_string( $linea['texto'] ) ) {
+                            $lines[] = $linea['texto'];
+                        } elseif ( isset( $linea[0] ) && is_string( $linea[0] ) ) {
+                            // If it's a numeric array, take the first element
+                            $lines[] = $linea[0];
+                        } else {
+                            // Convert array to string as last resort
+                            $lines[] = implode( ' ', array_filter( $linea, 'is_string' ) );
+                        }
                     }
                 }
             }
@@ -64,6 +78,11 @@ class MegaSoft_V2_Voucher {
             // If voucher is a string, split by newlines
             $lines = explode( "\n", $voucher_data );
         }
+
+        // Make sure all elements are strings
+        $lines = array_map( function( $line ) {
+            return is_string( $line ) ? $line : (string) $line;
+        }, $lines );
 
         return array_filter( $lines );
     }
