@@ -46,6 +46,9 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
         // Get credentials from main gateway
         $main_gateway_settings = get_option( 'woocommerce_megasoft_v2_settings', array() );
 
+        // Get simulator setting from main gateway
+        $this->simulate_inactive_pg = 'yes' === ( $main_gateway_settings['simulate_inactive_pg'] ?? 'no' );
+
         $this->api = new MegaSoft_V2_API(
             $main_gateway_settings['cod_afiliacion'] ?? '',
             $main_gateway_settings['api_user'] ?? '',
@@ -150,6 +153,19 @@ class WC_Gateway_MegaSoft_Pago_Movil_C2P extends WC_Payment_Gateway {
         $order = wc_get_order( $order_id );
 
         try {
+            // ⚠️ SIMULADOR DE PG INACTIVO - Solo para certificación MegaSoft
+            if ( $this->simulate_inactive_pg ) {
+                $this->logger->warning( '⚠️ SIMULADOR PG INACTIVO ACTIVADO (C2P) - Forzando error de timeout', array(
+                    'order_id' => $order_id,
+                    'payment_method' => 'C2P',
+                    'certification_mode' => true,
+                ) );
+
+                throw new Exception(
+                    __( 'Error: El Payment Gateway no responde. La operación excedió el tiempo de espera permitido (timeout). Por favor, intente nuevamente más tarde o contacte al comercio.', 'woocommerce-megasoft-gateway-v2' )
+                );
+            }
+
             // Get form data
             $phone      = sanitize_text_field( $_POST['pm_phone'] ?? '' );
             $bank       = sanitize_text_field( $_POST['pm_bank'] ?? '' );
@@ -357,6 +373,9 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
         // Get credentials from main gateway
         $main_gateway_settings = get_option( 'woocommerce_megasoft_v2_settings', array() );
 
+        // Get simulator setting from main gateway
+        $this->simulate_inactive_pg = 'yes' === ( $main_gateway_settings['simulate_inactive_pg'] ?? 'no' );
+
         $this->api = new MegaSoft_V2_API(
             $main_gateway_settings['cod_afiliacion'] ?? '',
             $main_gateway_settings['api_user'] ?? '',
@@ -468,6 +487,19 @@ class WC_Gateway_MegaSoft_Pago_Movil_P2C extends WC_Payment_Gateway {
 
         try {
             $this->logger->info( 'P2C process_payment iniciado', array( 'order_id' => $order_id ) );
+
+            // ⚠️ SIMULADOR DE PG INACTIVO - Solo para certificación MegaSoft
+            if ( $this->simulate_inactive_pg ) {
+                $this->logger->warning( '⚠️ SIMULADOR PG INACTIVO ACTIVADO (P2C) - Forzando error de timeout', array(
+                    'order_id' => $order_id,
+                    'payment_method' => 'P2C',
+                    'certification_mode' => true,
+                ) );
+
+                throw new Exception(
+                    __( 'Error: El Payment Gateway no responde. La operación excedió el tiempo de espera permitido (timeout). Por favor, intente nuevamente más tarde o contacte al comercio.', 'woocommerce-megasoft-gateway-v2' )
+                );
+            }
 
             // Get form data
             $customer_phone = sanitize_text_field( $_POST['p2c_phone'] ?? '' );
@@ -740,6 +772,9 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
         // Get credentials from main gateway
         $main_gateway_settings = get_option( 'woocommerce_megasoft_v2_settings', array() );
 
+        // Get simulator setting from main gateway
+        $this->simulate_inactive_pg = 'yes' === ( $main_gateway_settings['simulate_inactive_pg'] ?? 'no' );
+
         $this->api = new MegaSoft_V2_API(
             $main_gateway_settings['cod_afiliacion'] ?? '',
             $main_gateway_settings['api_user'] ?? '',
@@ -838,6 +873,19 @@ class WC_Gateway_MegaSoft_Credito_Inmediato extends WC_Payment_Gateway {
         $order = wc_get_order( $order_id );
 
         try {
+            // ⚠️ SIMULADOR DE PG INACTIVO - Solo para certificación MegaSoft
+            if ( $this->simulate_inactive_pg ) {
+                $this->logger->warning( '⚠️ SIMULADOR PG INACTIVO ACTIVADO (Crédito Inmediato) - Forzando error de timeout', array(
+                    'order_id' => $order_id,
+                    'payment_method' => 'Crédito Inmediato',
+                    'certification_mode' => true,
+                ) );
+
+                throw new Exception(
+                    __( 'Error: El Payment Gateway no responde. La operación excedió el tiempo de espera permitido (timeout). Por favor, intente nuevamente más tarde o contacte al comercio.', 'woocommerce-megasoft-gateway-v2' )
+                );
+            }
+
             // Get form data
             $doc_type   = sanitize_text_field( $_POST['ci_doc_type'] ?? 'V' );
             $doc_number = sanitize_text_field( $_POST['ci_doc_number'] ?? '' );

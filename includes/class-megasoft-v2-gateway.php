@@ -57,6 +57,7 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         $this->title                = $this->get_option( 'title' );
         $this->description          = $this->get_option( 'description' );
         $this->testmode             = 'yes' === $this->get_option( 'testmode' );
+        $this->simulate_inactive_pg = 'yes' === $this->get_option( 'simulate_inactive_pg', 'no' );
         $this->api_user             = $this->get_option( 'api_user' );
         $this->api_password         = $this->get_option( 'api_password' );
         $this->cod_afiliacion       = $this->get_option( 'cod_afiliacion' );
@@ -126,6 +127,13 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
                 'label'   => __( 'Habilitar modo de prueba', 'woocommerce-megasoft-gateway-v2' ),
                 'default' => 'yes',
                 'description' => __( 'Usa el ambiente de pruebas de Mega Soft (paytest.megasoft.com.ve).', 'woocommerce-megasoft-gateway-v2' ),
+            ),
+            'simulate_inactive_pg' => array(
+                'title'   => __( 'Simulador PG Inactivo (Certificación)', 'woocommerce-megasoft-gateway-v2' ),
+                'type'    => 'checkbox',
+                'label'   => __( 'Activar Simulador de Payment Gateway Inactivo', 'woocommerce-megasoft-gateway-v2' ),
+                'default' => 'no',
+                'description' => __( '⚠️ SOLO PARA CERTIFICACIÓN: Simula un timeout del Payment Gateway durante el checkout. Use esto para capturar pantallas de error para MegaSoft. DESACTIVAR después de la certificación.', 'woocommerce-megasoft-gateway-v2' ),
             ),
             'api_credentials' => array(
                 'title'       => __( 'Credenciales API', 'woocommerce-megasoft-gateway-v2' ),
@@ -570,6 +578,19 @@ class WC_Gateway_MegaSoft_V2 extends WC_Payment_Gateway {
         ) );
 
         try {
+            // ⚠️ SIMULADOR DE PG INACTIVO - Solo para certificación MegaSoft
+            if ( $this->simulate_inactive_pg ) {
+                $this->logger->warning( '⚠️ SIMULADOR PG INACTIVO ACTIVADO - Forzando error de timeout', array(
+                    'order_id' => $order_id,
+                    'certification_mode' => true,
+                ) );
+
+                // Simular timeout del Payment Gateway
+                throw new Exception(
+                    __( 'Error: El Payment Gateway no responde. La operación excedió el tiempo de espera permitido (timeout). Por favor, intente nuevamente más tarde o contacte al comercio.', 'woocommerce-megasoft-gateway-v2' )
+                );
+            }
+
             // Get card data from POST
             $card_data = $this->get_card_data_from_post();
 
